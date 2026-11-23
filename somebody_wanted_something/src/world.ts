@@ -13,7 +13,7 @@ type V3 = [number, number, number];
 
 /** Shader "styles": per-shape motion applied on the GPU, so shapes can move without re-uploading. */
 export const STYLE: Record<ShapeId, number> = {
-  tabs: 0, seal: 0, garden: 2, origami: 3, choir: 4, tilth: 5, liturgy: 6, chladni: 7,
+  tabs: 0, seal: 1, garden: 2, origami: 3, choir: 4, tilth: 5, liturgy: 6, chladni: 7,
   phone: 0, crt: 9, card: 0, abacus: 0, bone: 0, fire: 8, ember: 0,
 };
 
@@ -173,25 +173,55 @@ function tabs(b: Builder) {
   }
 }
 
-/** 2525: a mandate, as a seal that sends out rays. */
+/** Armillary rings. Every ring uses all its degrees of freedom: it spins in its own plane and tumbles about all three axes.
+ *  Per ring: radius, start angles about x/y/z, turn rates about x/y/z (rad/s), spin in its own plane (rad/s).
+ *  The vertex shader's RING_* tables are generated from this one, so edit it here. */
+export interface Ring { R: number; p: V3; w: V3; spin: number }
+export const ARMILLARY: Ring[] = [
+  { R: 4.75, p: [1.5708, 0.0, 0.0], w: [0.031, -0.047, 0.023], spin: 0.0 },
+  { R: 4.3, p: [0.3, 1.2, 0.5], w: [-0.043, 0.029, 0.052], spin: 0.05 },
+  { R: 3.85, p: [1.1, 2.6, 1.0], w: [0.057, 0.041, -0.036], spin: -0.1 },
+  { R: 3.4, p: [2.0, 0.5, 2.2], w: [-0.071, -0.053, 0.064], spin: 0.14 },
+  { R: 2.95, p: [0.7, 3.4, 0.4], w: [0.089, -0.076, 0.047], spin: -0.18 },
+  { R: 2.5, p: [1.7, 1.9, 2.9], w: [-0.101, 0.083, 0.094], spin: 0.22 },
+  { R: 2.05, p: [2.6, 4.2, 1.3], w: [0.123, 0.109, -0.088], spin: -0.27 },
+  { R: 1.6, p: [0.2, 5.1, 3.6], w: [-0.137, -0.121, 0.131], spin: 0.32 },
+];
+/** a ring's id rides in its accent: 0.02 + 0.04 * id (inner rings come out a little paler) */
+const ringAccent = (k: number) => 0.02 + 0.04 * k;
+
+/** 2525: a mandate, as an armillary sphere: nested rings turning about a common axis, with a sun at the centre and rays going out. */
 function seal(b: Builder) {
   const r = b.rnd;
-  [0.9, 1.7, 2.5, 3.2, 3.9, 4.5].forEach((R, i) => circle(b, 0, 0, 0, R, i % 2 ? 60 : 90, (R / 4.5) * 0.5 + r() * 0.05, 1));
-  for (let k = 0; k < 120; k++) {
-    const a = (k / 120) * TAU;
-    seg(b, [Math.cos(a) * 4.5, Math.sin(a) * 4.5, 0], [Math.cos(a) * 4.85, Math.sin(a) * 4.85, 0], 40, 0.55, 0.9);
-  }
-  for (let k = 0; k < 72; k++) {
-    const a = (k / 72) * TAU;
-    seg(b, [Math.cos(a) * 3.2, Math.sin(a) * 3.2, 0], [Math.cos(a) * 3.5, Math.sin(a) * 3.5, 0], 40, 0.45, 0.9);
-  }
-  for (let i = 0; i < 12; i++) {
-    const a1 = (i / 12) * TAU, a2 = ((i + 5) / 12) * TAU;
-    seg(b, [Math.cos(a1) * 2.5, Math.sin(a1) * 2.5, 0], [Math.cos(a2) * 2.5, Math.sin(a2) * 2.5, 0], 50, 0.3, 0.8);
-  }
-  for (let k = 0; k < 16; k++) {
-    const a = (k / 16) * TAU + 0.1;
-    seg(b, [Math.cos(a) * 5.2, Math.sin(a) * 5.2, 0], [Math.cos(a) * 11, Math.sin(a) * 11, 0], 26, 0.75 + r() * 0.2, 0.8, 1);
+  ARMILLARY.forEach(({ R }, k) => {
+    const birth = (R / 4.75) * 0.5 + r() * 0.05, acc = ringAccent(k);
+    [-0.06, 0, 0.06].forEach((o) => {
+      const n = Math.round(TAU * R * 62);
+      for (let i = 0; i < n; i++) {
+        const a = ((i + r()) / n) * TAU;
+        b.add(Math.cos(a) * (R + o), Math.sin(a) * (R + o), b.gauss() * 0.012, birth, 0.8, acc);
+      }
+    });
+    for (let q = 0; q < 72; q++) { // graduations, longer every 6th
+      const a = (q / 72) * TAU, len = q % 6 === 0 ? 0.3 : 0.14;
+      seg(b, [Math.cos(a) * (R + 0.08), Math.sin(a) * (R + 0.08), 0], [Math.cos(a) * (R + 0.08 + len), Math.sin(a) * (R + 0.08 + len), 0], 40, birth + 0.05, 0.9, acc, 0.006);
+    }
+    if (k >= 3) { // a bead riding the ring
+      const a = k * 1.9;
+      for (let i = 0; i < 380; i++) {
+        const u = b.gauss(), v = b.gauss(), w = b.gauss(), m = Math.hypot(u, v, w) || 1;
+        b.add(Math.cos(a) * R + (u / m) * 0.13, Math.sin(a) * R + (v / m) * 0.13, (w / m) * 0.13, birth + 0.1, 1.4, acc);
+      }
+    }
+  });
+  // the celestial sphere, faint, for depth; the polar axis; the sun
+  sphere(b, 0, 0, 0, 4.95, 3600, 0.4, 0.16, ringAccent(2));
+  seg(b, [0, -5.9, 0], [0, 5.9, 0], 60, 0.5, 0.8, 1);
+  sphere(b, 0, 0, 0, 0.3, 900, 0.2, 1.0, 1);
+  for (let k = 0; k < 26; k++) { // rays, out in every direction
+    const z = r() * 2 - 1, a = r() * TAU, s = Math.sqrt(1 - z * z);
+    const d: V3 = [s * Math.cos(a), z, s * Math.sin(a)];
+    seg(b, [d[0] * 5.4, d[1] * 5.4, d[2] * 5.4], [d[0] * (8 + r() * 2), d[1] * (8 + r() * 2), d[2] * (8 + r() * 2)], 26, 0.75 + r() * 0.2, 0.8, 1);
   }
 }
 
@@ -542,6 +572,13 @@ const GENERATORS: Record<ShapeId, (b: Builder) => void> = {
 
 // ── the particle system ───────────────────────────────────────────────────────────────────────────
 
+const v3 = (v: V3) => `vec3(${v.map((x) => x.toFixed(4)).join(', ')})`;
+const RING_TABLE = [
+  `const vec3 RING_P[8] = vec3[8](${ARMILLARY.map((r) => v3(r.p)).join(', ')});`,
+  `const vec3 RING_W[8] = vec3[8](${ARMILLARY.map((r) => v3(r.w)).join(', ')});`,
+  `const float RING_S[8] = float[8](${ARMILLARY.map((r) => r.spin.toFixed(4)).join(', ')});`,
+].join('\n  ');
+
 const VERT = /* glsl */ `
   attribute vec3 aPosA; attribute vec3 aInfoA;
   attribute vec3 aPosB; attribute vec3 aInfoB;
@@ -552,6 +589,8 @@ const VERT = /* glsl */ `
   uniform vec2 uMode, uStrike;
   uniform vec3 uColA, uColB, uAccA, uAccB;
   varying vec3 vCol; varying float vAlpha;
+
+  ${RING_TABLE}
 
   bool is(float s, float k) { return abs(s - k) < 0.5; }
   float hash(float n) { return fract(sin(n * 127.1 + 311.7) * 43758.5453); }
@@ -565,7 +604,23 @@ const VERT = /* glsl */ `
     if (info.z < -0.5) { // ambient dust drifts
       return p + 0.4 * vec3(sin(uTime * 0.13 + rnd.x * 40.0), cos(uTime * 0.11 + rnd.y * 40.0), sin(uTime * 0.09 + rnd.z * 40.0));
     }
-    if (is(style, 2.0)) { // garden: sway
+    if (is(style, 1.0)) { // seal: an armillary sphere, rings turning about the polar axis
+      if (info.z < 0.5) {
+        int k = int(floor(info.z / 0.04));
+        float az = RING_S[k] * uTime;
+        p.xy = mat2(cos(az), sin(az), -sin(az), cos(az)) * p.xy;
+        vec3 ang = RING_P[k] + RING_W[k] * uTime;
+        float cx = cos(ang.x), sx = sin(ang.x), cy = cos(ang.y), sy = sin(ang.y), cz = cos(ang.z), sz = sin(ang.z);
+        p.yz = vec2(p.y * cx - p.z * sx, p.y * sx + p.z * cx);
+        p.xz = vec2(p.x * cy + p.z * sy, -p.x * sy + p.z * cy);
+        p.xy = vec2(p.x * cz - p.y * sz, p.x * sz + p.y * cz);
+      } else {
+        float ay = 0.03 * uTime, cy = cos(ay), sy = sin(ay);
+        p.xz = vec2(p.x * cy + p.z * sy, -p.x * sy + p.z * cy);
+      }
+      float tc = cos(0.4), ts = sin(0.4); // the axis leans, like the real thing
+      p.xy = vec2(p.x * tc - p.y * ts, p.x * ts + p.y * tc);
+    } else if (is(style, 2.0)) { // garden: sway
       float s = max(p.y + 2.0, 0.0);
       p.x += sin(uTime * 0.7 + p.y * 1.1 + p.z * 0.5) * 0.045 * s;
       p.z += cos(uTime * 0.6 + p.y * 0.9 + p.x * 0.4) * 0.03 * s;

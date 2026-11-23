@@ -59,7 +59,7 @@ fire, the choir) are animated in the vertex shader, so every frame is still a pu
 |---|---|
 | 0:00 | 2026: forty windows, a browser's tab strip, "Applications" |
 | 0:10 | Spoken: "Twenty twenty-six. Forty tabs open. You are the integration layer." |
-| 0:21 | **2525 Mandates**: the windows become a seal; the tab strip fades; one input line remains |
+| 0:21 | **2525 Mandates**: the windows become an armillary sphere of turning rings; the tab strip fades; one input line remains |
 | 0:46 | **3535 Cultivars**: a garden of trees, grown from the ground up |
 | 1:12 | **4545 Foldings**: a Miura-ori sheet folds rigidly, creases lighting up as they hinge, collapses to a stack, then opens into a 3D relief |
 | 1:37 | **5555 Chorales**: twelve voices argue, then fall into unison |

@@ -136,7 +136,7 @@ const cam = (d: number, h: number, az: number, spin: number, ly = 0, fov = 50, d
 export const SHOTS: Shot[] = [
   { t: 0, shape: 'tabs', morph: 0, grow: 0, gain: 1.7, color: '#8aa4d6', accent: '#ff4d3d', cam: cam(17, 0.5, 0.0, 0.012, 0),
     placard: { room: 'ROOM 01 · 2026', title: 'Applications', line: 'You are the integration layer.', build: 'build 2026.11' } },
-  { t: 21, shape: 'seal', morph: 5, grow: 0.8, gain: 0.45, color: '#ffd27a', accent: '#fff2c9', cam: cam(13.5, 0.4, 0.0, 0.015, 0, 50),
+  { t: 21, shape: 'seal', morph: 5, grow: 0.8, gain: 0.48, color: '#ffd27a', accent: '#fff2c9', cam: cam(18.5, 3.0, 0.0, 0.03, 0, 40),
     placard: { room: 'ROOM 02 · 2525', title: 'Mandates', line: 'Say the goal. A mandate does the rest.', build: 'mandate build 2525.4' } },
   { t: 46.5, shape: 'garden', morph: 7, grow: 1, gain: 0.9, color: '#58e0a0', accent: '#d8ff9a', cam: cam(17.5, 4.6, -0.5, 0.035, 2.0, 52),
     placard: { room: 'ROOM 03 · 3535', title: 'Cultivars', line: 'Software is planted, not built.', build: 'cultivar epoch 3535.β' } },
