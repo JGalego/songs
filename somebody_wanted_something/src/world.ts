@@ -13,7 +13,7 @@ type V3 = [number, number, number];
 
 /** Shader "styles": per-shape motion applied on the GPU, so shapes can move without re-uploading. */
 export const STYLE: Record<ShapeId, number> = {
-  tabs: 0, seal: 0, garden: 2, pleats: 3, choir: 4, tilth: 5, liturgy: 6, chladni: 7,
+  tabs: 0, seal: 0, garden: 2, origami: 3, choir: 4, tilth: 5, liturgy: 6, chladni: 7,
   phone: 0, crt: 9, card: 0, abacus: 0, bone: 0, fire: 8, ember: 0,
 };
 
@@ -146,8 +146,6 @@ function sampleText(lines: string[], font: string, lineH: number, w: number, h: 
   return { pts, spans, w, h };
 }
 
-const tri = (x: number) => Math.abs((((x % 2) + 2) % 2) - 1) * 2 - 1; // triangle wave in [-1, 1], period 2
-
 // ── the shapes ────────────────────────────────────────────────────────────────────────────────────
 
 /** 2026: forty overlapping windows, notification badges and all. */
@@ -175,7 +173,7 @@ function tabs(b: Builder) {
   }
 }
 
-/** 2525: a mandate, as a wax seal that sends out rays. */
+/** 2525: a mandate, as a seal that sends out rays. */
 function seal(b: Builder) {
   const r = b.rnd;
   [0.9, 1.7, 2.5, 3.2, 3.9, 4.5].forEach((R, i) => circle(b, 0, 0, 0, R, i % 2 ? 60 : 90, (R / 4.5) * 0.5 + r() * 0.05, 1));
@@ -191,9 +189,6 @@ function seal(b: Builder) {
     const a1 = (i / 12) * TAU, a2 = ((i + 5) / 12) * TAU;
     seg(b, [Math.cos(a1) * 2.5, Math.sin(a1) * 2.5, 0], [Math.cos(a2) * 2.5, Math.sin(a2) * 2.5, 0], 50, 0.3, 0.8);
   }
-  const t = sampleText(['MANDATE'], `700 150px ${MONO}`, 200, 900, 260, 5, r);
-  const s = 3.2 / 900;
-  for (const [x, y] of t.pts) b.add((x - 450) * s, -(y - 130) * s, 0.02, 0.15, 0.55, 0.9);
   for (let k = 0; k < 16; k++) {
     const a = (k / 16) * TAU + 0.1;
     seg(b, [Math.cos(a) * 5.2, Math.sin(a) * 5.2, 0], [Math.cos(a) * 11, Math.sin(a) * 11, 0], 26, 0.75 + r() * 0.2, 0.8, 1);
@@ -232,23 +227,43 @@ function garden(b: Builder) {
   }
 }
 
-/** 4545: a sheet that folds itself into pleats (the fold amount is animated on the GPU). */
-function pleats(b: Builder) {
+// ── 4545: origami. A Miura-ori: a sheet of identical parallelogram facets whose folding is exactly rigid (every facet stays flat,
+// only the creases hinge), the pattern used to fold solar panels. Each particle lives on one facet, addressed by its grid cell
+// (i, j) and position (u, v) inside it; the vertex shader places the four corners for the current fold angle `theta`.
+export const MIURA = { I: 12, J: 8, a: 1.0, b: 1.1, alpha: Math.PI / 3 };
+/** Folded dimensions of the unit cell for fold angle theta (0 = flat, towards pi/2 = fully collapsed): [S, V, L, H]. */
+export function miuraDims(theta: number): [number, number, number, number] {
+  const { a, b, alpha } = MIURA;
+  const ct = Math.cos(theta), st = Math.sin(theta), ta = Math.tan(alpha), sa = Math.sin(alpha);
+  const k = Math.sqrt(1 + ct * ct * ta * ta);
+  return [(b * ct * ta) / k, b / k, a * Math.sqrt(1 - st * st * sa * sa), a * st * sa];
+}
+
+function origami(b: Builder) {
   const r = b.rnd;
-  const W = 15, H = 8.6, a = 1.25, c = 1.25, amp = 1.0;
-  const z = (x: number, y: number) => amp * tri(x / a) * tri(y / c);
-  for (let i = 0; i < 40000; i++) {
-    const x = (r() - 0.5) * W, y = (r() - 0.5) * H;
-    b.add(x, y, z(x, y), r(), 0.55);
+  const { I, J, a, b: bl } = MIURA;
+  const EDGE = 0.9999;
+  // the faint sheet itself
+  for (let n = 0; n < 34000; n++) b.add(Math.floor(r() * I) + r() * EDGE, Math.floor(r() * J) + r() * EDGE, 0, r(), 0.4);
+  // interior creases, which only light up once they start to fold: columns alternate between two tints (mountain / valley), rows share one
+  for (let i = 1; i < I; i++) for (let j = 0; j < J; j++) {
+    const n = Math.round(a * 85);
+    for (let k = 0; k < n; k++) b.add(i, j + ((k + r()) / n) * EDGE, 0, r(), 1.25, i % 2 === 0 ? 0.95 : 0.5);
   }
-  for (let k = Math.ceil(-W / 2 / a); k <= W / 2 / a; k++) {
-    const x = k * a;
-    for (let i = 0; i < H * 40; i++) { const y = -H / 2 + (i / (H * 40)) * H; b.add(x, y, z(x, y), r(), 1, 1); }
+  for (let j = 1; j < J; j++) for (let i = 0; i < I; i++) {
+    const n = Math.round(bl * 85);
+    for (let k = 0; k < n; k++) b.add(i + ((k + r()) / n) * EDGE, j, 0, r(), 1.15, 0.7);
   }
-  for (let k = Math.ceil(-H / 2 / c); k <= H / 2 / c; k++) {
-    const y = k * c;
-    for (let i = 0; i < W * 40; i++) { const x = -W / 2 + (i / (W * 40)) * W; b.add(x, y, z(x, y), r(), 1, 1); }
+  // the border of the sheet is always visible
+  for (let j = 0; j < J; j++) for (let k = 0; k < 75; k++) {
+    b.add(0, j + ((k + r()) / 75) * EDGE, 0, 0, 1.1);
+    b.add(I - 1 + EDGE, j + ((k + r()) / 75) * EDGE, 0, 0, 1.1);
   }
+  for (let i = 0; i < I; i++) for (let k = 0; k < 85; k++) {
+    b.add(i + ((k + r()) / 85) * EDGE, 0, 0, 0, 1.1);
+    b.add(i + ((k + r()) / 85) * EDGE, J - 1 + EDGE, 0, 0, 1.1);
+  }
+  b.densify(0); // repeated points, no jitter: positions encode facet indices
 }
 
 /** 5555: twelve voices on a ring, columns that argue and then agree. */
@@ -423,20 +438,63 @@ function abacus(b: Builder) {
   }
 }
 
-/** A bone with tally notches cut into it, and one lone notch that glows. */
+/** An archaeological bone shaft (think Lebombo / Ishango): curved, tapering, rough, broken at both ends, with groups of tally cuts and one lone notch that glows. */
 function bone(b: Builder) {
   const r = b.rnd;
-  const rad = (x: number) => 0.46 - 0.08 * Math.cos((x / 4.75) * Math.PI * 0.5) + 0.04 * Math.sin(x * 2.1);
-  const notches: [number, number][] = [[-2.9, 0.6], [-2.6, 0.6], [-2.3, 0.6], [-2.0, 0.6], [-1.0, 0.6], [-0.7, 0.6], [-0.4, 0.6], [-0.1, 0.6], [2.5, 1]];
-  for (let i = 0; i < 26000; i++) {
-    const x = (r() - 0.5) * 9.5, a = r() * TAU, rr = rad(x);
-    if (notches.some(([nx]) => Math.abs(x - nx) < 0.045)) continue;
-    b.add(x, rr * Math.cos(a), rr * Math.sin(a), 0, 0.7);
+  const L = 9.4, X0 = -L / 2;
+  const cy = (u: number) => 0.5 * Math.cos((u - 0.5) * Math.PI) - 0.25; // gently curved
+  const rad = (u: number) => 0.82 * (0.62 + 0.38 * Math.sqrt(Math.sin(Math.PI * Math.min(1, Math.max(0.0, 0.04 + u * 0.92))))) * (1 + 0.06 * Math.sin(u * 17) + 0.04 * Math.sin(u * 41 + 2));
+  const at = (u: number, ph: number, k = 1): V3 => [X0 + u * L, cy(u) + rad(u) * k * Math.cos(ph), rad(u) * 0.8 * k * Math.sin(ph)];
+  // jagged broken ends: the shaft is cut back by a different amount around its circumference
+  const jag = (ph: number, side: number) => 0.018 + 0.03 * Math.abs(Math.sin(ph * 2.5 + side * 1.7)) + 0.015 * Math.abs(Math.sin(ph * 6.3 + side));
+  // tally cuts: groups of ticks along the front face, and the lone notch
+  const groups: [number, number][] = [[0.07, 4], [0.25, 3], [0.4, 6], [0.62, 5]];
+  const ticks: number[] = [];
+  for (const [u0, n] of groups) for (let i = 0; i < n; i++) ticks.push(u0 + i * 0.03);
+  const lone = 0.83;
+  const cut = (u: number, ph: number) => (ph > 0.15 && ph < Math.PI - 0.15) && [...ticks, lone].some((tu) => Math.abs(u - tu) < 0.0065);
+  // the compact bone of the shaft
+  for (let i = 0; i < 30000; i++) {
+    const u = r(), ph = r() * TAU;
+    if (u < jag(ph, 0) || u > 1 - jag(ph, 1) || cut(u, ph)) continue;
+    const p = at(u, ph, 0.97 + 0.03 * r());
+    b.add(p[0], p[1], p[2], 0, 0.6);
   }
-  for (const sx of [-1, 1]) for (const oy of [-0.34, 0.34]) sphere(b, sx * 4.8, oy, 0, 0.42, 3500, 0, 0.7);
-  for (const [nx, acc] of notches) for (const side of [-1, 1]) {
-    for (let j = 0; j < 150; j++) { const a = r() * TAU, rr = rad(nx) * 0.97; b.add(nx + side * 0.05, rr * Math.cos(a), rr * Math.sin(a), 0, acc === 1 ? 1.7 : 1.1, acc); }
+  // grain: long thin streaks along the bone
+  for (let k = 0; k < 46; k++) {
+    const ph = r() * TAU, w = r() * 0.05, u0 = 0.03 + r() * 0.3, u1 = u0 + 0.25 + r() * 0.6;
+    for (let i = 0; i < 160; i++) {
+      const u = u0 + ((Math.min(u1, 0.97) - u0) * i) / 160;
+      if (cut(u, ph)) continue;
+      const p = at(u, ph + Math.sin(u * 23 + k) * w);
+      b.add(p[0], p[1], p[2], 0.05, 0.85);
+    }
   }
+  // the broken ends: a ring of compact bone around a hollow marrow cavity, with a little spongy bone inside
+  for (const [u, side] of [[0.0, 0], [1.0, 1]] as [number, number][]) {
+    for (let i = 0; i < 1800; i++) {
+      const ph = r() * TAU, k = 0.6 + 0.4 * r();
+      const uu = side === 0 ? jag(ph, 0) : 1 - jag(ph, 1);
+      const p = at(Math.min(Math.max(uu, 0), 1), ph, k);
+      b.add(p[0] + (u === 0 ? 1 : -1) * 0.02, p[1], p[2], 0.02, 0.9);
+    }
+    for (let i = 0; i < 500; i++) {
+      const ph = r() * TAU, k = 0.1 + 0.4 * r(), uu = side === 0 ? 0.012 : 0.988;
+      const p = at(uu, ph, k);
+      b.add(p[0], p[1], p[2], 0.02, 0.3);
+    }
+  }
+  // the tally cuts: a bright line across the face inside each gap (accent .6), the lone notch deeper and brighter
+  const slash = (u: number, acc: number, w: number, span: number) => {
+    for (let i = 0; i < 70; i++) {
+      const ph = Math.PI / 2 - span + (2 * span * i) / 70;
+      const p = at(u, ph, 0.93);
+      b.add(p[0] + b.gauss() * 0.004, p[1], p[2], 0, w, acc);
+    }
+  };
+  for (const tu of ticks) slash(tu, 0.6, 1.1, 0.95);
+  slash(lone, 1, 1.9, 1.15);
+  b.densify(0.01);
 }
 
 /** A campfire: stones, glowing logs and a pool of light are static; flame tongues and sparks are seeds that the shader animates. */
@@ -479,7 +537,7 @@ function ember(b: Builder) {
 }
 
 const GENERATORS: Record<ShapeId, (b: Builder) => void> = {
-  tabs, seal, garden, pleats, choir, tilth, liturgy, chladni, phone, crt, card, abacus, bone, fire, ember,
+  tabs, seal, garden, origami, choir, tilth, liturgy, chladni, phone, crt, card, abacus, bone, fire, ember,
 };
 
 // ── the particle system ───────────────────────────────────────────────────────────────────────────
@@ -489,13 +547,15 @@ const VERT = /* glsl */ `
   attribute vec3 aPosB; attribute vec3 aInfoB;
   attribute vec4 aRand;
   uniform float uTime, uProg, uSpread, uGrow, uStyleA, uStyleB, uPx, uFog, uSwirl;
-  uniform float uFold, uAgree, uBlink, uFire, uVib, uPulse;
+  uniform float uAgree, uBlink, uFire, uVib, uPulse;
+  uniform vec4 uMiura; uniform vec3 uMC; uniform float uFoldT;
   uniform vec2 uMode, uStrike;
   uniform vec3 uColA, uColB, uAccA, uAccB;
   varying vec3 vCol; varying float vAlpha;
 
   bool is(float s, float k) { return abs(s - k) < 0.5; }
   float hash(float n) { return fract(sin(n * 127.1 + 311.7) * 43758.5453); }
+  vec3 mvert(float i, float j) { return vec3(i * uMiura.x, j * uMiura.z + mod(i, 2.0) * uMiura.y, mod(j, 2.0) * uMiura.w); }
   vec3 fireGrad(float h) {
     return mix(mix(vec3(0.55, 0.07, 0.02), vec3(1.0, 0.4, 0.08), smoothstep(0.0, 0.5, h)), vec3(1.0, 0.85, 0.4), smoothstep(0.5, 1.0, h));
   }
@@ -509,9 +569,12 @@ const VERT = /* glsl */ `
       float s = max(p.y + 2.0, 0.0);
       p.x += sin(uTime * 0.7 + p.y * 1.1 + p.z * 0.5) * 0.045 * s;
       p.z += cos(uTime * 0.6 + p.y * 0.9 + p.x * 0.4) * 0.03 * s;
-    } else if (is(style, 3.0)) { // pleats: fold
-      p.z *= uFold;
-      p.xy *= 1.0 - 0.1 * uFold;
+    } else if (is(style, 3.0)) { // origami: a Miura-ori, folded rigidly
+      float fi = floor(p.x), fj = floor(p.y);
+      vec2 uv = vec2(p.x - fi, p.y - fj);
+      vec3 A = mvert(fi, fj), B = mvert(fi + 1.0, fj), C = mvert(fi + 1.0, fj + 1.0), D = mvert(fi, fj + 1.0);
+      p = mix(mix(A, B, uv.x), mix(D, C, uv.x), uv.y) - uMC;
+      if (info.z > 0.45) vis = smoothstep(0.02, 0.25, uFoldT); // creases appear as they fold
     } else if (is(style, 4.0)) { // choir
       float rr = length(p.xz);
       if (rr > 4.0 && rr < 5.3 && p.y > -1.98) {
@@ -636,7 +699,7 @@ export class World {
     const c = () => ({ value: new THREE.Color() });
     this.u = {
       uTime: { value: 0 }, uProg: { value: 1 }, uSpread: { value: 0.55 }, uGrow: { value: 0 }, uStyleA: { value: 0 }, uStyleB: { value: 0 },
-      uPx: { value: px }, uFog: { value: 0.03 }, uSwirl: { value: 1.6 }, uFold: { value: 1 }, uAgree: { value: 0 }, uBlink: { value: 1 },
+      uPx: { value: px }, uFog: { value: 0.03 }, uSwirl: { value: 1.6 }, uMiura: { value: new THREE.Vector4() }, uMC: { value: new THREE.Vector3() }, uFoldT: { value: 0 }, uAgree: { value: 0 }, uBlink: { value: 1 },
       uFire: { value: 1 }, uVib: { value: 0 }, uPulse: { value: 0 }, uMode: { value: new THREE.Vector2(2, 3) }, uStrike: { value: new THREE.Vector2() },
       uColA: c(), uColB: c(), uAccA: c(), uAccB: c(), uIntensity: { value: 0.6 },
     };

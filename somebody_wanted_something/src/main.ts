@@ -17,9 +17,9 @@ import { clamp, keyframes, lerp, smoothstep, window01 } from './math';
 import { RetroShader } from './post';
 import { loadFonts, setTextScale } from './text';
 import {
-  AGREE, CUT, DIM, DURATION, FIRE, FOLD, MODE_M, MODE_N, REFRAINS, SECTIONS, SHOTS, STRIKE_A, STRIKE_B, sectionAt,
+  AGREE, CUT, DIM, DURATION, FIRE, MODE_M, MODE_N, REFRAINS, SECTIONS, SHOTS, STRIKE_A, STRIKE_B, THETA, sectionAt,
 } from './timeline';
-import { World } from './world';
+import { MIURA, World, miuraDims } from './world';
 
 const params = new URLSearchParams(location.search);
 // render height (16:9). Defaults to the real on-screen resolution (incl. display scaling), capped at 4K.
@@ -118,7 +118,12 @@ function render(t: number) {
   u.uSpread.value = s.morph < 2 ? 0.2 : 0.45;
   u.uColA.value.copy(palette[Math.max(0, i - 1)].c); u.uAccA.value.copy(palette[Math.max(0, i - 1)].a);
   u.uColB.value.copy(palette[i].c); u.uAccB.value.copy(palette[i].a);
-  u.uFold.value = keyframes(FOLD, t);
+  // the Miura-ori: fold angle from the timeline, breathing once it is open, and a nudge on the beat
+  const theta = Math.min(1.5, keyframes(THETA, t) + 0.1 * Math.sin(t * 0.9) * smoothstep(88, 91, t) + 0.05 * kick * energy);
+  const [mS, mV, mL, mH] = miuraDims(theta);
+  u.uMiura.value.set(mS, mV, mL, mH);
+  u.uMC.value.set((MIURA.I * mS) / 2, (MIURA.J * mL + mV) / 2, mH / 2);
+  u.uFoldT.value = theta;
   u.uAgree.value = keyframes(AGREE, t);
   u.uMode.value.set(keyframes(MODE_N, t), keyframes(MODE_M, t));
   u.uStrike.value.set(keyframes(STRIKE_A, t), keyframes(STRIKE_B, t));

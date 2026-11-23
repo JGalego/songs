@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { keyframes, smoothstep, window01 } from './math';
+import { keyframes, smoothstep } from './math';
 import { CanvasTex, MONO, SERIF, cursor, typed } from './text';
 import {
-  CHROME, CREDITS, CREDITS_START, CUT, DURATION, LYRICS, PROMPT, PROMPT_TEXT, SHOTS, TITLE, YEARS,
+  CHROME, CREDITS, CREDITS_START, CUT, DURATION, LYRICS, PROMPT, PROMPT_TEXT, SHOTS, YEARS,
 } from './timeline';
 
 const TAB_NAMES = ['Inbox (212)', 'Slack', 'Jira — SW-4412', 'Docs', 'Dashboard', 'Pull request #4412', 'Untitled', 'Calendar', 'New Tab', 'Standup notes', 'Logs', 'Billing'];
@@ -192,27 +192,6 @@ export class Hud {
     const parts: string[] = [];
     const ops: ((ctx: CanvasRenderingContext2D) => void)[] = [];
     const cx = 800, cy = 400;
-
-    const title = q(window01(t, TITLE.t0 + 1, TITLE.t1, 1.2));
-    if (title > 0) {
-      parts.push(`title${title}`);
-      ops.push((ctx) => {
-        ctx.globalAlpha = title;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'alphabetic';
-        ctx.shadowColor = 'rgba(0,0,0,0.9)';
-        ctx.shadowBlur = 40;
-        ctx.font = `500 128px ${SERIF}`;
-        ctx.letterSpacing = '10px';
-        ctx.fillStyle = '#f6f1e7';
-        ctx.fillText('SOMEBODY WANTED', cx, cy - 10);
-        ctx.fillText('SOMETHING', cx, cy + 120);
-        ctx.letterSpacing = '8px';
-        ctx.font = `400 30px ${MONO}`;
-        ctx.fillStyle = 'rgba(232,230,227,0.7)';
-        ctx.fillText('( YEAR 2525 )', cx, cy + 200);
-      });
-    }
 
     if (t >= CREDITS_START - 0.5) {
       const out = 1 - smoothstep(DURATION - 2.2, DURATION - 0.6, t);

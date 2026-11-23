@@ -112,7 +112,7 @@ export const REFRAINS: [number, number][] = [
 // ── The shape sequence. Every shot is a world made of the same ~70k particles; at `t` they start
 // flowing out of the previous shot's shape into this one, taking `morph` seconds (0 = hard cut).
 export type ShapeId =
-  | 'tabs' | 'seal' | 'garden' | 'pleats' | 'choir' | 'tilth' | 'liturgy' | 'chladni'
+  | 'tabs' | 'seal' | 'garden' | 'origami' | 'choir' | 'tilth' | 'liturgy' | 'chladni'
   | 'phone' | 'crt' | 'card' | 'abacus' | 'bone' | 'fire' | 'ember';
 
 export interface Placard { room: string; title: string; line: string; build: string }
@@ -140,7 +140,7 @@ export const SHOTS: Shot[] = [
     placard: { room: 'ROOM 02 · 2525', title: 'Mandates', line: 'Say the goal. A mandate does the rest.', build: 'mandate build 2525.4' } },
   { t: 46.5, shape: 'garden', morph: 7, grow: 1, gain: 0.9, color: '#58e0a0', accent: '#d8ff9a', cam: cam(17.5, 4.6, -0.5, 0.035, 2.0, 52),
     placard: { room: 'ROOM 03 · 3535', title: 'Cultivars', line: 'Software is planted, not built.', build: 'cultivar epoch 3535.β' } },
-  { t: 72, shape: 'pleats', morph: 5.5, grow: 0.5, color: '#ffe0d0', accent: '#ff8fb0', cam: cam(13, 6.5, 0.0, 0.03, -0.5, 52),
+  { t: 72, shape: 'origami', morph: 5.5, grow: 0.5, gain: 0.55, color: '#ffe0d0', accent: '#ff8fb0', cam: cam(13.5, 5.2, 0.0, 0.04, 0, 52),
     placard: { room: 'ROOM 04 · 4545', title: 'Foldings', line: 'Nothing ships. It folds into shape.', build: 'folding rev 4545.0' } },
   { t: 97.5, shape: 'choir', morph: 5.5, grow: 0.6, color: '#b79cff', accent: '#fff0ff', cam: cam(14, 3.2, 0.3, 0.05, 0.5, 52),
     placard: { room: 'ROOM 05 · 5555', title: 'Chorales', line: 'Programs convene, argue, and agree.', build: 'chorale build 5555' } },
@@ -154,7 +154,7 @@ export const SHOTS: Shot[] = [
   // the other wing: back down the ladder
   { t: 191.9, shape: 'tilth', morph: 0.5, grow: 0, color: '#8fa8c0', accent: '#ffffff', cam: cam(12, 4.0, 0.0, 0.02, -1.5, 55) },
   { t: 192.9, shape: 'choir', morph: 0.4, grow: 0, color: '#9d8fd0', accent: '#fff0ff', cam: cam(14, 3.2, 0.3, 0.05, 0.5, 52) },
-  { t: 193.6, shape: 'pleats', morph: 0.4, grow: 0, color: '#e0c8bd', accent: '#ff8fb0', cam: cam(13, 6.5, 0.0, 0.03, -0.5, 52) },
+  { t: 193.6, shape: 'origami', morph: 0.4, grow: 0, gain: 0.55, color: '#e0c8bd', accent: '#ff8fb0', cam: cam(13, 6.5, 0.0, 0.03, -0.5, 52) },
   { t: 194.8, shape: 'tabs', morph: 0.9, grow: 0, color: '#8aa4d6', accent: '#ff4d3d', cam: cam(17, 0.5, 0.0, 0.012, 0),
     placard: { room: 'WING B · THE OTHER WING', title: 'Browser tabs', line: 'Forty of them, and one of you.', build: 'c. 2015' } },
   { t: 196.0, shape: 'phone', morph: 0.9, grow: 0, gain: 0.9, color: '#aab4c8', accent: '#7fd0ff', cam: cam(12, 0.3, 0.2, 0.02, 0, 50),
@@ -165,7 +165,7 @@ export const SHOTS: Shot[] = [
     placard: { room: 'WING B · THE OTHER WING', title: 'Punch card', line: 'Instructions, in holes.', build: 'c. 1960' } },
   { t: 204.7, shape: 'abacus', morph: 1.0, grow: 0, gain: 0.7, color: '#d9a566', accent: '#ffe1a8', cam: cam(12, 0.3, -0.15, 0.02, 0, 50),
     placard: { room: 'WING B · THE OTHER WING', title: 'Abacus', line: 'Memory you could move with a finger.', build: 'c. 2700 BCE' } },
-  { t: 206.6, shape: 'bone', morph: 1.4, grow: 0, gain: 0.3, color: '#e8dfcb', accent: '#ffb347', cam: cam(11.5, 1.2, 0.1, 0.02, 0, 50),
+  { t: 206.6, shape: 'bone', morph: 1.4, grow: 0, gain: 0.28, color: '#e8dfcb', accent: '#ffb347', cam: cam(9.6, 1.2, 0.18, 0.015, 0, 50),
     placard: { room: 'WING B · THE OTHER WING', title: 'A notch on a bone', line: 'The first thing anyone ever wrote down.', build: 'c. 35,000 BCE' } },
   { t: 209.4, shape: 'fire', morph: 2.2, grow: 0, gain: 0.5, color: '#ff7a2a', accent: '#fff0a8', cam: cam(8.6, 1.0, 0.0, 0.03, 0.5, 52),
     placard: { room: 'WING B · THE OTHER WING', title: 'Fire', line: 'Somebody wanted to be warm.', build: 'c. 1,000,000 BCE' } },
@@ -200,9 +200,9 @@ export const MODE_M: [number, number][] = [[173, 3], [180, 5], [186, 7], [190.6,
 export const AGREE: [number, number][] = [
   [97.5, 0], [105, 0.1], [110, 0.2], [113.0, 0.35], [114.5, 1], [122, 1], [122.5, 0], [193, 0.5], [DURATION, 0.5],
 ];
-/** Foldings: 0 = flat sheet, 1 = fully pleated. */
-export const FOLD: [number, number][] = [
-  [72, 0], [74, 0], [81, 1], [89, 1], [92, 0.7], [96, 1], [97.5, 1], [193.6, 1], [DURATION, 1],
+/** Foldings: the fold angle of the Miura-ori in radians. 0 = flat sheet, towards pi/2 = fully collapsed. */
+export const THETA: [number, number][] = [
+  [0, 0], [77.2, 0], [82.5, 0.95], [85.2, 1.32], [88.2, 0.78], [200, 0.78],
 ];
 /** Liturgy strike-throughs: [clause A, clause B] visibility. */
 export const STRIKE_A: [number, number][] = [[148, 0], [157.8, 0], [158.6, 1], [172.9, 1]];
@@ -212,8 +212,6 @@ export const FIRE: [number, number][] = [[209.4, 0.45], [211.2, 0.6], [215.2, 0.
 
 /** The world dims under the credits so they read. */
 export const DIM: [number, number][] = [[250.5, 1], [253, 0.3], [DURATION, 0.3]];
-
-export const TITLE = { t0: 3.0, t1: 9.5 };
 
 export const CREDITS: [string, string][] = [
   ['Song', 'made with Suno v6'],
