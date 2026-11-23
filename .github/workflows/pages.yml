@@ -2,6 +2,7 @@
 #
 # Every push and pull request type-checks and builds each song folder (any top-level folder with a package.json).
 # Pushes to main also assemble the site (site/ as the landing page, each song's build in /<folder>/) and deploy it.
+# radio.json maps each folder to its built (hashed) mp3, for the landing page's radio mode.
 
 name: CI & Pages
 
@@ -34,13 +35,18 @@ jobs:
         run: |
           set -euo pipefail
           cp -r site _site
+          radio='{}'
           for pkg in */package.json; do
             song=$(dirname "$pkg")
             echo "::group::$song"
             (cd "$song" && npm ci && npm run build)
             cp -r "$song/dist" "_site/$song"
+            for mp3 in "$song"/dist/assets/*.mp3; do
+              [ -e "$mp3" ] && radio=$(jq -c --arg k "$song" --arg v "$song/${mp3#"$song"/dist/}" '. + {($k): $v}' <<<"$radio")
+            done
             echo "::endgroup::"
           done
+          echo "$radio" | tee _site/radio.json
           touch _site/.nojekyll
 
       - name: Check the export CLI parses

@@ -48,6 +48,9 @@ Pushes to `main` also deploy the site to GitHub Pages:
 
 - [`site/`](site/) is the landing page; posters live in `site/posters/`
 - each song's build is served at `/songs/<folder>/`
+- `radio.json` maps each folder to its built mp3, for the landing page's radio mode (the **radio** toggle, or `R`):
+  every song on the page, shuffled, forever, audio only. Like boring radio, it's live: what's on air depends only on
+  the clock, so everyone hears the same song at the same moment. New songs join automatically once they have a card
 
 Songs build with Vite `base: './'`, so they work under any path.
 
