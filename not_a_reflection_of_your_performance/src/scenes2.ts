@@ -175,29 +175,117 @@ export const scenes2: Scene[] = [
   // ── 1:03 "Thank you for the journey"
   {
     name: 'journey', t0: 63.25, t1: 67.0, bg: ['#0c1632', '#2a1446'], glow: [C.sun, C.pink, C.lavender],
+    // the career as snakes and ladders: hop, climb the ladder, reach the top row, land on the snake, slide out the door
     draw: ({ c, t }) => {
-      const P = (u: number): [number, number] => [170 + u * 1580, cy + 60 + Math.sin(u * Math.PI * 2.2) * 150 - u * 40];
-      const prog = ramp(t, 63.4, 66.5);
-      // the road
-      c.lineCap = 'round'; c.lineJoin = 'round';
-      c.beginPath(); for (let i = 0; i <= 80; i++) { const [x, y] = P(i / 80); i ? c.lineTo(x, y) : c.moveTo(x, y); }
-      c.lineWidth = 56; c.strokeStyle = 'rgba(255,244,230,0.14)'; c.stroke();
-      c.setLineDash([26, 26]); c.lineWidth = 6; c.strokeStyle = 'rgba(255,244,230,0.5)'; c.stroke(); c.setLineDash([]);
-      const stops: [number, string][] = [[0.04, 'Day 1'], [0.22, 'First promotion'], [0.42, 'The launch'], [0.62, 'Reorg #4'], [0.8, 'Quick sync']];
-      stops.forEach(([u, label], i) => {
-        const [x, y] = P(u), s = pop(t, 63.4 + u * 3.1, 0.35), up = i % 2 === 0;
-        at(c, x, y, { s }, () => {
-          c.beginPath(); c.arc(0, 0, 18, 0, Math.PI * 2); c.fillStyle = C.sun; c.fill();
-          rr(c, -110, up ? -110 : 40, 220, 64, 14); c.fillStyle = C.card; c.fill();
-          txt(c, label, 0, up ? -78 : 72, { size: 24, weight: 700, align: 'center', max: 200 });
-        });
+      const TS = 128, COLS = 7, ROWS = 4, bx0 = cx - 60 - (COLS * TS) / 2, by1 = cy + 40 + (ROWS * TS) / 2;
+      const tile = (n: number): [number, number] => {
+        const r = Math.floor((n - 1) / COLS), i = (n - 1) % COLS, col = r % 2 ? COLS - 1 - i : i;
+        return [bx0 + col * TS + TS / 2, by1 - r * TS - TS / 2];
+      };
+      const beat = (n: number) => 0.267 + n * BEAT;
+      const board = pop(t, 63.25, 0.45);
+      // the snakes, head first (Catmull-Rom through the waypoints)
+      const curve = (pts: [number, number][], n = 140) => {
+        const out: [number, number][] = [];
+        for (let i = 0; i < n; i++) {
+          const f = (i / (n - 1)) * (pts.length - 1), k = Math.min(pts.length - 2, Math.floor(f)), u = f - k;
+          const p0 = pts[Math.max(0, k - 1)], p1 = pts[k], p2 = pts[k + 1], p3 = pts[Math.min(pts.length - 1, k + 2)];
+          const cr = (a: number, b: number, d: number, e: number) => 0.5 * (2 * b + (-a + d) * u + (2 * a - 5 * b + 4 * d - e) * u * u + (-a + 3 * b - 3 * d + e) * u * u * u);
+          out.push([cr(p0[0], p1[0], p2[0], p3[0]), cr(p0[1], p1[1], p2[1], p3[1])]);
+        }
+        return out;
+      };
+      const door: [number, number] = [bx0 + COLS * TS + 230, by1];
+      const big = curve([tile(22), [1190, 420], [1150, 505], [1250, 565], [1330, 630], [1290, 705], [1380, 772], [1470, 792], [door[0] - 30, by1 - 14]]);
+      const small = curve([tile(28), [470, 440], [560, 520], [500, 610], [600, 690], tile(2)], 90);
+      const snake = (pts: [number, number][], col: string, band: string, rHead: number, tongue: number) => {
+        c.lineCap = 'round';
+        for (let pass = 0; pass < 2; pass++) {
+          for (let i = pts.length - 2; i >= 0; i--) {
+            const r = lerp(rHead * 0.82, rHead * 0.22, i / (pts.length - 1));
+            c.beginPath(); c.moveTo(...pts[i]); c.lineTo(...pts[i + 1]);
+            c.lineWidth = pass ? r * 2 : r * 2 + 6;
+            c.strokeStyle = pass ? (Math.floor(i / 9) % 2 ? band : col) : 'rgba(10,12,30,0.35)';
+            c.stroke();
+          }
+        }
+        const [hx, hy] = pts[0], a = Math.atan2(pts[0][1] - pts[3][1], pts[0][0] - pts[3][0]);
+        c.save(); c.translate(hx, hy); c.rotate(a);
+        if (tongue > 0) { c.strokeStyle = C.red; c.lineWidth = 4; c.beginPath(); c.moveTo(rHead, 0); c.lineTo(rHead + 26 * tongue, 0); c.lineTo(rHead + 34 * tongue, -7); c.moveTo(rHead + 26 * tongue, 0); c.lineTo(rHead + 34 * tongue, 7); c.stroke(); }
+        c.beginPath(); c.ellipse(0, 0, rHead * 1.25, rHead, 0, 0, Math.PI * 2); c.fillStyle = col; c.fill();
+        for (const s of [-1, 1]) {
+          c.beginPath(); c.arc(rHead * 0.35, s * rHead * 0.45, rHead * 0.3, 0, Math.PI * 2); c.fillStyle = '#fff'; c.fill();
+          c.beginPath(); c.arc(rHead * 0.45, s * rHead * 0.45, rHead * 0.15, 0, Math.PI * 2); c.fillStyle = C.ink; c.fill();
+        }
+        c.restore();
+      };
+      const ladder = (a: [number, number], b: [number, number], w = 34) => {
+        const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L;
+        c.lineCap = 'round'; c.strokeStyle = '#c98b4f';
+        c.lineWidth = 6;
+        for (let d = 24; d < L - 12; d += 30) { const px = a[0] + (dx * d) / L, py = a[1] + (dy * d) / L; c.beginPath(); c.moveTo(px - (nx * w) / 2, py - (ny * w) / 2); c.lineTo(px + (nx * w) / 2, py + (ny * w) / 2); c.stroke(); }
+        c.lineWidth = 9; c.strokeStyle = '#e0a868';
+        for (const s of [-1, 1]) { c.beginPath(); c.moveTo(a[0] + (s * nx * w) / 2, a[1] + (s * ny * w) / 2); c.lineTo(b[0] + (s * nx * w) / 2, b[1] + (s * ny * w) / 2); c.stroke(); }
+      };
+
+      // the pawn's route, on the beat: hop, hop, climb, hop ×4, slide, out the door
+      type Leg = { a: number; b: number; pos: (u: number) => [number, number]; hop?: boolean };
+      const legs: Leg[] = [];
+      const hopLeg = (from: number, to: number, land: number) => legs.push({ a: land - 0.24, b: land, hop: true, pos: (u) => { const p = tile(from), q = tile(to); return [lerp(p[0], q[0], u), lerp(p[1], q[1], u)]; } });
+      hopLeg(1, 2, beat(117.5)); hopLeg(2, 3, beat(118));
+      legs.push({ a: beat(118) + 0.04, b: beat(119), pos: (u) => { const p = tile(3), q = tile(18), e = smooth(0, 1, u); return [lerp(p[0], q[0], e), lerp(p[1], q[1], e)]; } });
+      hopLeg(18, 19, beat(119.5)); hopLeg(19, 20, beat(120)); hopLeg(20, 21, beat(120.5)); hopLeg(21, 22, beat(121));
+      legs.push({ a: beat(121) + 0.06, b: beat(122.3), pos: (u) => big[Math.min(big.length - 1, Math.floor(inCubic(u) * 0.6 * (big.length - 1) + u * 0.4 * (big.length - 1)))] });
+      const out = smooth(beat(122.3), beat(122.7), t);
+      let pos = tile(1), lift = 0, squash = 0;
+      for (const L of legs) {
+        if (t >= L.b) pos = L.pos(1);
+        else if (t >= L.a) { const u = (t - L.a) / (L.b - L.a); pos = L.pos(u); if (L.hop) lift = Math.sin(u * Math.PI) * 46; break; }
+        else break;
+        if (L.hop && t - L.b < 0.12) squash = 1 - (t - L.b) / 0.12;
+      }
+      if (out > 0) pos = [lerp(door[0] - 30, door[0], out), by1 - 14];
+
+      at(c, cx - 60, cy + 40, { s: 0.9 + 0.1 * board, a: clamp01(board * 2) }, () => {
+        c.translate(-(cx - 60), -(cy + 40));
+        // the board
+        card(c, cx - 60, cy + 40, COLS * TS + 36, ROWS * TS + 36, { r: 24 });
+        const tints = ['#fffaf3', '#f1ecff', '#fffaf3', '#ffeef5', '#fffaf3', '#e6f9f6', '#fffaf3', '#fff3da'];
+        for (let n = 1; n <= COLS * ROWS; n++) {
+          const [x, y] = tile(n);
+          c.fillStyle = tints[(n + Math.floor((n - 1) / COLS)) % tints.length]; c.fillRect(x - TS / 2 + 2, y - TS / 2 + 2, TS - 4, TS - 4);
+          txt(c, String(n), x - TS / 2 + 12, y - TS / 2 + 20, { size: 18, weight: 700, color: 'rgba(27,29,58,0.28)' });
+        }
+        ladder(tile(13), tile(26), 30);
+        ladder(tile(3), tile(18));
+        snake(small, C.lavender, '#8f74ee', 20, 0);
+        // the exit: a door off the edge of the board, open while the pawn slides
+        const open = smooth(beat(121.4), beat(121.9), t) * (1 - smooth(beat(122.75), beat(123.05), t));
+        const [dx, dy] = door;
+        rr(c, dx - 70, dy - 220, 140, 220, [10, 10, 0, 0]); c.fillStyle = C.green; c.fill();
+        rr(c, dx - 56, dy - 206, 112, 206, [6, 6, 0, 0]); c.fillStyle = open > 0 ? '#ffe3a3' : '#0e2b36'; c.fill();
+        c.fillStyle = '#0e2b36';
+        c.beginPath(); c.moveTo(dx - 56, dy - 206); c.lineTo(dx - 56 + 112 * (1 - open * 0.8), dy - 206 + 18 * open); c.lineTo(dx - 56 + 112 * (1 - open * 0.8), dy - 18 * open); c.lineTo(dx - 56, dy); c.closePath(); c.fill();
+        rr(c, dx - 36, dy - 262, 72, 30, 6); c.fillStyle = C.green; c.fill();
+        txt(c, 'EXIT', dx, dy - 247, { size: 18, weight: 800, color: '#fff', align: 'center', spacing: 2 });
+        snake(big, C.green, '#2bb07a', 30, t > beat(120.7) && t < beat(122.3) ? 0.6 + 0.4 * Math.sin(t * 30) : 0);
+        // the pawn, with its shadow on the board
+        if (out < 1) {
+          const [px, py] = pos, s = 1 - out * 0.4;
+          c.save(); c.globalAlpha = (1 - out) * 0.35;
+          c.beginPath(); c.ellipse(px, py + 22, 26 * (1 - lift / 120), 8, 0, 0, Math.PI * 2); c.fillStyle = '#0a0c1e'; c.fill();
+          c.restore();
+          c.save(); c.globalAlpha = 1 - smooth(0.7, 1, out);
+          c.translate(px, py + 22 - lift); c.scale(s * (1 + squash * 0.18), s * (1 - squash * 0.18));
+          c.fillStyle = C.pink;
+          c.beginPath(); c.ellipse(0, -6, 28, 10, 0, 0, Math.PI * 2); c.fill();
+          c.beginPath(); c.moveTo(-24, -8); c.bezierCurveTo(-20, -30, -10, -40, -8, -52); c.lineTo(8, -52); c.bezierCurveTo(10, -40, 20, -30, 24, -8); c.closePath(); c.fill();
+          c.beginPath(); c.ellipse(0, -52, 16, 6, 0, 0, Math.PI * 2); c.fillStyle = '#ff9ccb'; c.fill();
+          c.beginPath(); c.arc(0, -72, 19, 0, Math.PI * 2); c.fillStyle = C.pink; c.fill();
+          c.beginPath(); c.arc(-6, -78, 6, 0, Math.PI * 2); c.fillStyle = 'rgba(255,255,255,0.55)'; c.fill();
+          c.restore();
+        }
       });
-      // the exit
-      const [ex, ey] = P(1);
-      at(c, ex, ey - 20, { s: pop(t, 63.8, 0.4) }, () => { rr(c, -56, -110, 112, 170, 12); c.fillStyle = C.green; c.fill(); rr(c, -42, -96, 84, 142, 6); c.fillStyle = '#0e2b36'; c.fill(); txt(c, 'EXIT', 0, -126, { size: 24, weight: 800, color: C.green, align: 'center', spacing: 4 }); });
-      const [mx, my] = P(Math.min(1, prog));
-      at(c, mx, my - 10, { s: 1 - smooth(0.96, 1, prog) * 0.9 }, () => person(c, 0, 0, 34, C.pink));
-      if (prog > 0.96) confetti(c, t, 66.35, 60, ex - 300, ex + 100, ey - 300, 420, 8);
     },
   },
 
@@ -223,7 +311,14 @@ export const scenes2: Scene[] = [
         [68.45, 28, (g) => { rr(g, -72, -28, 144, 56, 10); g.fillStyle = C.red; g.fill(); g.fillStyle = '#fff'; g.fillRect(-62, -10, 124, 7); }],
       ];
       c.save(); c.translate(bx, by); c.scale(S, S);
-      c.fillStyle = 'rgba(0,0,0,0.25)'; c.beginPath(); c.ellipse(DX / 2, y1 + 24, 360, 28, 0, 0, Math.PI * 2); c.fill();
+      // contact shadow: the box's footprint on the floor, softened and cast a little to the right
+      c.save(); c.filter = 'blur(16px)';
+      poly([[x0 - 6, y1 - 4], [x1 + 26, y1 - 4], [x1 + DX + 34, y1 + DY - 2], [x0 + DX + 8, y1 + DY - 2]]);
+      c.fillStyle = 'rgba(8,4,20,0.55)'; c.fill();
+      c.restore();
+      c.save(); c.filter = 'blur(5px)';
+      c.fillStyle = 'rgba(8,4,20,0.5)'; c.fillRect(x0 + 4, y1 - 4, x1 - x0 + 4, 10);
+      c.restore();
       // the open top: the inside of the box
       poly([[x0, y0], [x1, y0], [x1 + DX, bk], [x0 + DX, bk]]); c.fillStyle = '#7d5530'; c.fill();
       // a standing back flap sits behind everything that falls in
@@ -243,11 +338,15 @@ export const scenes2: Scene[] = [
       c.fillStyle = '#c99a62'; c.fillRect(x0, y0, x1 - x0, y1 - y0);
       c.fillStyle = 'rgba(0,0,0,0.07)'; c.fillRect(x0, y1 - 22, x1 - x0, 22);
       poly(mix(frontOpen, frontShut, close)); c.fillStyle = close > 0.5 ? '#ddb579' : '#d3a367'; c.fill();
-      // tape along the seam, with a strip down the front
+      // tape along the seam: its ends follow the box's depth, and it wraps over the edge and down the right side
       if (close > 0.92) {
-        const sy = bk + 35;
-        poly([[x0 + DX / 2, sy - 13], [x1 + DX / 2, sy - 13], [x1 + DX / 2 - 6, sy + 13], [x0 + DX / 2 - 6, sy + 13]]); c.fillStyle = '#f0e2b6'; c.fill();
-        c.fillStyle = '#f0e2b6'; c.fillRect(-28, y0, 56, 78);
+        const d0 = 0.33, d1 = 0.67, D = (x: number, d: number): [number, number] => [x + DX * d, y0 + DY * d];
+        const run = 74, rx = x1;
+        c.fillStyle = 'rgba(240,226,182,0.92)';
+        poly([D(x0, d0), D(rx, d0), D(rx, d1), D(x0, d1)]); c.fill();                         // across the lid
+        poly([D(rx, d0), D(rx, d1), [D(rx, d1)[0], D(rx, d1)[1] + run], [D(rx, d0)[0], D(rx, d0)[1] + run]]);
+        c.fillStyle = 'rgba(214,196,150,0.92)'; c.fill();                                       // down the side, in its shade
+        c.fillStyle = 'rgba(255,255,255,0.25)'; poly([D(x0, d0), D(rx, d0), D(rx, d0 + 0.06), D(x0, d0 + 0.06)]); c.fill();
       }
       // the label, handwritten
       if (t > 69.3) {
@@ -473,9 +572,35 @@ export const scenes2: Scene[] = [
   {
     name: 'threeAm', t0: 100.95, t1: 105.4, bg: ['#04060f', '#0c1030'], glow: [C.lavender, '#3b4fa0', C.teal],
     draw: ({ c, t }) => {
-      // a moon
-      at(c, 300, 280, { s: pop(t, 101.1, 0.5) }, () => { c.beginPath(); c.arc(0, 0, 90, 0, Math.PI * 2); c.fillStyle = '#fff6d8'; c.shadowColor = '#fff6d8'; c.shadowBlur = 60; c.fill(); c.shadowBlur = 0; c.beginPath(); c.arc(40, -20, 80, 0, Math.PI * 2); c.fillStyle = '#05071a'; c.fill(); });
-      for (let i = 0; i < 3; i++) txt(c, 'z', 400 + i * 40, 200 - i * 50 - ((t * 30) % 20), { size: 40 + i * 14, weight: 800, color: 'rgba(255,244,230,0.5)' });
+      // a sleeping moon (the only one in the building who is)
+      at(c, 300, 280, { s: pop(t, 101.1, 0.5) }, () => {
+        // the crescent as one shape (so the glow follows it): the moon's outer arc, back along the shadow disc's arc
+        const R1 = 90, ox = 40, oy = -20, R2 = 80, d = Math.hypot(ox, oy), a = (R1 * R1 - R2 * R2 + d * d) / (2 * d), h = Math.sqrt(R1 * R1 - a * a);
+        const px = (a * ox) / d, py = (a * oy) / d, ux = -oy / d, uy = ox / d;
+        const i1: [number, number] = [px + h * ux, py + h * uy], i2: [number, number] = [px - h * ux, py - h * uy];
+        const t1 = Math.atan2(i1[1], i1[0]), t2 = Math.atan2(i2[1], i2[0]);
+        c.save();
+        c.beginPath();
+        c.arc(0, 0, R1, t1, t2 < t1 ? t2 + Math.PI * 2 : t2);
+        c.arc(ox, oy, R2, Math.atan2(i2[1] - oy, i2[0] - ox), Math.atan2(i1[1] - oy, i1[0] - ox), true);
+        c.closePath();
+        c.fillStyle = '#fff6d8'; c.shadowColor = '#fff6d8'; c.shadowBlur = 60; c.fill();
+        c.restore();
+        c.strokeStyle = '#c9b98e'; c.lineWidth = 4; c.lineCap = 'round';
+        c.beginPath(); c.arc(-58, 18, 13, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();               // closed eye
+        c.beginPath(); c.moveTo(-70, 18); c.lineTo(-76, 26); c.moveTo(-58, 31); c.lineTo(-58, 39); c.stroke(); // lashes
+      });
+      // Z's rise from it, one per beat: each swells, sways, tilts and fades as it drifts up
+      for (let n = Math.floor((t - 101.3) / BEAT) - 5; n <= Math.floor((t - 101.3) / BEAT); n++) {
+        const age = t - (101.3 + n * BEAT); if (age < 0 || age > 2.6 || n < 0) continue;
+        const u = age / 2.6, x = 350 + u * 230 + Math.sin(age * 3 + n) * 22, y = 230 - u * 230;
+        const a = smooth(0, 0.12, u) * (1 - smooth(0.55, 1, u));
+        at(c, x, y, { s: 0.5 + u * 0.9, rot: -0.25 + Math.sin(age * 2.4 + n) * 0.22, a }, () => {
+          c.shadowColor = 'rgba(167,139,250,0.9)'; c.shadowBlur = 18;
+          txt(c, 'Z', 0, 0, { size: 52, weight: 800, color: n % 3 === 1 ? '#d9ccff' : '#fff1d6', align: 'center' });
+          c.shadowBlur = 0;
+        });
+      }
       const s = pop(t, 101.1, 0.5);
       at(c, cx, cy, { s: 0.92 + 0.08 * s, a: clamp01(s * 2) }, () => {
         rr(c, -210, -380, 420, 760, 56); c.fillStyle = '#10142e'; c.fill(); c.lineWidth = 8; c.strokeStyle = '#3a3f70'; c.stroke();
@@ -485,14 +610,55 @@ export const scenes2: Scene[] = [
         txt(c, 'BOARD · RESOLUTION #7', -150, -112, { size: 17, weight: 800, color: C.lavender, spacing: 2, max: 320 });
         txt(c, 'Please sign to approve', -150, -76, { size: 28, weight: 700, max: 320 });
         txt(c, 'restructuring, effective now', -150, -44, { size: 20, weight: 500, color: C.inkSoft, max: 320 });
-        // the signatures
-        c.strokeStyle = C.cream; c.lineWidth = 5; c.lineCap = 'round';
-        for (let i = 0; i < 3; i++) {
-          const k = ramp(t, 101.7 + i * 0.9, 102.5 + i * 0.9), y = 40 + i * 100;
-          c.beginPath(); for (let j = 0; j <= 40 * k; j++) { const u = j / 40, x = -150 + u * 300, yy = y + Math.sin(u * 14 + i) * 16 * (1 - u * 0.5); j ? c.lineTo(x, yy) : c.moveTo(x, yy); } c.stroke();
-          c.fillStyle = 'rgba(255,244,230,0.3)'; c.fillRect(-150, y + 30, 300, 2);
-          txt(c, i === 0 ? 'M. Okafor' : `agent-0${48 + i * 37}`, -150, y + 52, { size: 16, weight: 600, color: 'rgba(255,244,230,0.5)' });
-        }
+        // the signatures: one groggy human scrawl, then two agents sign instantly, each with its own exact figure
+        const line = (pts: [number, number][], upto: number) => {
+          const n = Math.floor(pts.length * clamp01(upto)); if (n < 2) return;
+          c.beginPath(); c.moveTo(...pts[0]); for (let j = 1; j < n; j++) c.lineTo(...pts[j]); c.stroke();
+        };
+        // human: a slanted cursive "M. Okafor"-ish scrawl (a tall capital, uneven letters, a dot), then an underline
+        // flourish swept back under it; signed slowly and a little shakily
+        const hy = 44, human: [number, number][] = [];
+        const slant = (x: number, y: number): [number, number] => [x - (y - hy) * 0.35, y];
+        // the capital: up, down, up, down
+        [[-140, 8], [-128, -34], [-116, 6], [-104, -30], [-94, 10]].forEach(([x, y], i, a) => {
+          if (!i) return; const [x0, y0] = a[i - 1];
+          for (let j = 0; j < 10; j++) { const u = j / 10; human.push(slant(lerp(x0, x, u), hy + lerp(y0, y, u) + Math.sin(u * Math.PI) * 3)); }
+        });
+        // the rest: loops of uneven height and width, one tall ascender, an "f"-like descender near the end
+        const heights = [0.55, 0.5, 1.5, 0.6, 0.45, -1.2, 0.55, 0.5], widths = [26, 22, 28, 24, 20, 26, 22, 24];
+        let x = -84;
+        heights.forEach((hgt, i) => {
+          for (let j = 0; j < 22; j++) {
+            const a = (j / 22) * Math.PI * 2, w = widths[i];
+            human.push(slant(x + (j / 22) * w + Math.sin(a) * w * 0.3, hy + 8 - (1 - Math.cos(a)) * 0.5 * 26 * hgt + Math.sin(j * 1.9 + i) * 0.7));
+          }
+          x += widths[i];
+        });
+        for (let j = 0; j <= 30; j++) { const u = j / 30; human.push([x + 6 + u * 22, hy + 6 - Math.sin(u * Math.PI) * 6]); } // the tail
+        for (let j = 0; j <= 40; j++) { const u = j / 40; human.push([x + 28 - u * 290, hy + 22 + Math.sin(u * Math.PI) * 8 - u * 6]); } // underline
+        c.strokeStyle = C.cream; c.lineWidth = 4; c.lineCap = 'round'; c.lineJoin = 'round';
+        line(human, ramp(t, 101.5, 102.95));
+        // agents: damped harmonograph figures, hundreds of exact strokes, drawn in a blink
+        const agentSig = (seed: number, y: number): [number, number][] => {
+          const f1 = 2 + (seed % 3), f2 = 3 + ((seed * 7) % 4) + 0.02, p = seed * 1.3, pts: [number, number][] = [];
+          for (let j = 0; j <= 600; j++) {
+            const s = (j / 600) * 40, d = Math.exp(-s * 0.035);
+            pts.push([Math.sin(f1 * s * 0.5 + p) * 120 * d + Math.sin(f2 * s * 0.5) * 30 * d, y + Math.sin(f2 * s * 0.5 + p * 0.7) * 24 * d + Math.cos(f1 * s * 0.25) * 6 * d]);
+          }
+          return pts;
+        };
+        const sigs = [{ y: 40, who: 'M. Okafor', meta: '' }, { y: 140, who: 'agent-085', meta: '0x9f3a… · 3 ms', seed: 5, at: 103.0 }, { y: 240, who: 'agent-0122', meta: '0x41d0… · 2 ms', seed: 11, at: 103.27 }];
+        sigs.forEach((g, i) => {
+          if (i > 0) {
+            const k = ramp(t, g.at!, g.at! + 0.18);
+            c.save(); c.strokeStyle = C.teal; c.lineWidth = 1.4; c.shadowColor = C.teal; c.shadowBlur = k < 1 ? 14 : 6; c.globalAlpha = 0.9;
+            line(agentSig(g.seed!, g.y), k);
+            c.restore();
+            if (k >= 1) mono(c, g.meta, 150, g.y + 52, { size: 13, color: 'rgba(94,225,214,0.65)', align: 'right', alpha: smooth(g.at! + 0.18, g.at! + 0.35, t) });
+          }
+          c.fillStyle = 'rgba(255,244,230,0.3)'; c.fillRect(-150, g.y + 32, 300, 2);
+          txt(c, g.who, -150, g.y + 52, { size: 16, weight: 600, color: 'rgba(255,244,230,0.5)' });
+        });
       });
       if (t > 104.1) stamp(c, cx + 20, cy + 40, 'APPROVED 3–0', 52, { a: smooth(104.1, 104.2, t), s: 1 + (1 - outBack((t - 104.1) / 0.22)) * 0.6, color: C.green, angle: -0.16 });
     },

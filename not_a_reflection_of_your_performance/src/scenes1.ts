@@ -10,7 +10,7 @@ const cx = W / 2, cy = H / 2 - 30;
 const BEAT = 60 / 110.98;
 
 export const scenes1: Scene[] = [
-  // ── 0:00 "Hi team! Got fifteen minutes? It's nothing bad."
+  // ── 0:00 "Hi team! Got 15 minutes? It's nothing bad."
   {
     name: 'invite', t0: 0, t1: 7.4, bg: NAVY, wipe: false,
     draw: ({ c, t }) => {
@@ -23,7 +23,7 @@ export const scenes1: Scene[] = [
         txt(c, 'Quick sync', -w / 2 + 50, -h / 2 + 132, { size: 76, weight: 800 });
         txt(c, 'Today · 4:45 – 5:00 PM · Room B4 (the small one)', -w / 2 + 50, -h / 2 + 192, { size: 26, weight: 500, color: C.inkSoft, max: w - 100 });
         rr(c, -w / 2 + 50, -h / 2 + 226, w - 100, 150, 16); c.fillStyle = '#f3eee6'; c.fill();
-        const n1 = typed('Hi team! Got fifteen minutes?', t, 1.0, 14), n2 = typed("It's nothing bad.", t, 5.44, 14);
+        const n1 = typed('Hi team! Got 15 minutes?', t, 1.0, 14), n2 = typed("It's nothing bad.", t, 5.44, 14);
         txt(c, n1 + (n2 || t > 4 ? '' : blink(t) ? '▍' : ''), -w / 2 + 76, -h / 2 + 276, { size: 32, weight: 500, max: w - 152 });
         if (n2 || t > 5.2) txt(c, n2 + (t < 6.7 && blink(t) ? '▍' : ''), -w / 2 + 76, -h / 2 + 330, { size: 32, weight: 500, max: w - 152 });
         // the other attendees join, one per beat

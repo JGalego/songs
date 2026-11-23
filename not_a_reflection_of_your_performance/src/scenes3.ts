@@ -136,11 +136,14 @@ export const scenes3: Scene[] = [
   {
     name: 'replyAll', t0: 128.7, t1: 131.9, bg: ['#0e1630', '#2a1446'], glow: [C.lavender, C.pink, C.sun],
     draw: ({ c, t }) => {
-      const w = appWindow(c, cx, cy + 10, 1300, 720, 'Inbox · Farewell, and good luck!');
+      // sits below the headcount ticker and above the subtitles
+      const w = appWindow(c, cx, cy + 45, 1300, 620, 'Inbox · Farewell, and good luck!');
       const n = Math.floor(smooth(128.8, 131.6, t) * 312);
-      for (let i = 0; i < 12; i++) {
+      c.save();
+      rr(c, w.x, w.y, w.w, w.h, [0, 0, 22, 22]); c.clip(); // the list stays inside the window
+      for (let i = 0; i < 9; i++) {
         const idx = n - i; if (idx <= 0) break;
-        const y = w.y + 60 + i * 66, a = 1 - i * 0.05;
+        const y = w.y + 56 + i * 64, a = 1 - i * 0.09;
         c.globalAlpha = a;
         rr(c, w.x + 30, y - 28, w.w - 60, 56, 10); c.fillStyle = i === 0 ? '#efe9ff' : '#f5f0e8'; c.fill();
         avatar(c, w.x + 66, y, 18, avatarColor(idx));
@@ -148,6 +151,7 @@ export const scenes3: Scene[] = [
         txt(c, `Re: ${'Re: '.repeat(Math.min(4, 1 + (idx % 4)))}Thanks for everything!`, w.x + 260, y, { size: 24, weight: 500, color: C.inkSoft, max: w.w - 400 });
         c.globalAlpha = 1;
       }
+      c.restore();
       pill(c, w.x + w.w - 50, w.y + w.h - 40, `Reply all: ${fmt(n)}`, { size: 30, bg: C.pink, fg: '#fff', align: 'right' });
     },
   },

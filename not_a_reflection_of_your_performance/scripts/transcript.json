@@ -2,7 +2,7 @@
  {
   "start": 1.0,
   "end": 7.0,
-  "text": "Hi team! Got fifteen minutes? It's nothing bad.",
+  "text": "Hi team! Got 15 minutes? It's nothing bad.",
   "words": [
    {
     "w": "Hi",
@@ -20,7 +20,7 @@
     "e": 2.94
    },
    {
-    "w": "fifteen",
+    "w": "15",
     "s": 2.94,
     "e": 3.38
    },

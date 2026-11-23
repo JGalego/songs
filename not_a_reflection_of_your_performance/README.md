@@ -51,7 +51,7 @@ where a scene leaves the background clear. Everything is a pure function of the 
 
 | Time | Scene |
 |---|---|
-| 0:00 | A calendar invite: "Quick sync. Got fifteen minutes?" The whole day is meetings; 4:59 PM |
+| 0:00 | A calendar invite: "Quick sync. Got 15 minutes?" The whole day is meetings; 4:59 PM |
 | 0:16 | Interns in March, juniors in July: the offboarding wave |
 | 0:21 | The model writes boilerplate and never asks why (questions asked: 0) |
 | 0:25 | No sick days, no raises: human vs agent |
