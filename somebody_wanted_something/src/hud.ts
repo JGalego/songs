@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { keyframes, smoothstep } from './math';
-import { CanvasTex, MONO, SERIF, cursor, typed } from './text';
+import { WORD_TIMES } from './karaoke';
+import { CanvasTex, MONO, SERIF, cursor, karaokeAt, karaokeLines, karaokeText, typed } from './text';
 import {
   CHROME, CREDITS, CREDITS_START, CUT, DURATION, LYRICS, PROMPT, PROMPT_TEXT, SHOTS, YEARS,
 } from './timeline';
@@ -11,6 +12,8 @@ export const fmtYear = (v: number) => {
   const r = Math.round(v);
   return r < 0 ? `${Math.abs(r).toLocaleString('en-US')} BCE` : String(r);
 };
+
+const KARAOKE = karaokeLines(WORD_TIMES);
 
 /** Screen-space overlay in a fixed 1920x1080 coordinate system. */
 export class Hud {
@@ -171,19 +174,17 @@ export class Hud {
   }
 
   private drawSubtitle(t: number) {
-    const line = LYRICS.find((l) => t >= l.t - 0.1 && t < l.end + 0.5);
-    const alpha = line && this.subtitles ? 1 - smoothstep(line.end, line.end + 0.5, t) : 0;
-    this.mats[4].opacity = alpha;
-    if (!line || alpha <= 0) return;
-    const shown = typed(line.text, t, line.t, Math.max(0.6, (line.end - line.t) * 0.55));
-    this.sub.draw(shown + (line.spoken ? 's' : ''), (ctx) => {
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+    // karaoke: the line shows dim just before it's sung, and each word fills in while it's being sung
+    const { i, alpha } = karaokeAt(KARAOKE, t);
+    this.mats[4].opacity = this.subtitles ? alpha : 0;
+    if (i < 0 || !this.subtitles) return;
+    const line = LYRICS[i];
+    this.sub.draw(`${i}|${Math.round(t * 240)}`, (ctx) => {
       ctx.font = line.spoken ? `400 36px ${MONO}` : `500 58px ${SERIF}`;
       ctx.shadowColor = 'rgba(0,0,0,0.95)';
       ctx.shadowBlur = 16;
-      ctx.fillStyle = line.spoken ? '#b9c3d8' : '#f6f1e7';
-      ctx.fillText(line.spoken ? shown.toLowerCase() : shown, 900, 60);
+      if (line.spoken) karaokeText(ctx, line.text.toLowerCase(), WORD_TIMES[i], t, 900, 60, 1760, 'rgba(185,195,216,0.4)', '#dfe6f4');
+      else karaokeText(ctx, line.text, WORD_TIMES[i], t, 900, 60, 1760, 'rgba(246,241,231,0.42)', '#ffd27a');
     });
   }
 

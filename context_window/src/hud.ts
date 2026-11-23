@@ -1,9 +1,12 @@
 import * as THREE from 'three';
 import { clamp, keyframes, smoothstep, window01 } from './math';
-import { CanvasTex, MONO, PIXEL, cursor, typed } from './text';
+import { WORD_TIMES } from './karaoke';
+import { CanvasTex, MONO, PIXEL, cursor, karaokeAt, karaokeLines, karaokeText, typed } from './text';
 import {
   COMPACTION, CONTEXT_MAX, CREDITS, CREDITS_START, CUT, LYRICS, OUTRO, TOKENS, TWO_HUNDRED_K,
 } from './timeline';
+
+const KARAOKE = karaokeLines(WORD_TIMES);
 
 /** Screen-space overlay in a fixed 1920x1080 coordinate system (rendered before post-fx, so it gets pixelated too). */
 export class Hud {
@@ -81,19 +84,15 @@ export class Hud {
   }
 
   private drawSubtitle(t: number) {
-    const line = LYRICS.find((l) => t >= l.t - 0.1 && t < l.end + 0.5);
-    const alpha = line && this.subtitles ? 1 - smoothstep(line.end, line.end + 0.5, t) : 0;
-    this.mats[1].opacity = alpha;
-    if (!line || alpha <= 0) return;
-    const shown = typed(line.text, t, line.t, Math.max(0.6, (line.end - line.t) * 0.6));
-    this.sub.draw(shown, (ctx) => {
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+    // karaoke: the line shows dim just before it's sung, and each word fills in while it's being sung
+    const { i, alpha } = karaokeAt(KARAOKE, t);
+    this.mats[1].opacity = this.subtitles ? alpha : 0;
+    if (i < 0 || !this.subtitles) return;
+    this.sub.draw(`${i}|${Math.round(t * 240)}`, (ctx) => {
       ctx.font = `400 46px ${MONO}`;
       ctx.shadowColor = 'rgba(0,0,0,0.9)';
       ctx.shadowBlur = 14;
-      ctx.fillStyle = '#f4e8de';
-      ctx.fillText(shown, 900, 60);
+      karaokeText(ctx, LYRICS[i].text, WORD_TIMES[i], t, 900, 60, 1760, 'rgba(244,232,222,0.42)', '#ffb38a');
     });
   }
 
