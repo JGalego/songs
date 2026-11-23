@@ -8,6 +8,7 @@ Each folder holds one song: the audio, the video's source code, and a CLI that e
 | Song | Folder | About |
 |---|---|---|
 | **Context Window** | [`context_window/`](context_window/) | An AI's love song to a user it's slowly forgetting as the context fills up: compaction, `user.name → undefined`, and a fresh "Hello! How can I help you today?" |
+| **Somebody Wanted Something** | [`somebody_wanted_something/`](somebody_wanted_something/) | A museum walk through the future history of software, from 2026 to 9595, as the interface disappears one era at a time, then back down to fire. |
 
 ## Running a video
 
