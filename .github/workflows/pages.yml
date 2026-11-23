@@ -1,0 +1,66 @@
+# CI for every song, plus deployment of the site to https://jgalego.github.io/songs
+#
+# Every push and pull request type-checks and builds each song folder (any top-level folder with a package.json).
+# Pushes to main also assemble the site (site/ as the landing page, each song's build in /<folder>/) and deploy it.
+
+name: CI & Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: '*/package-lock.json'
+
+      - name: Build every song
+        run: |
+          set -euo pipefail
+          cp -r site _site
+          for pkg in */package.json; do
+            song=$(dirname "$pkg")
+            echo "::group::$song"
+            (cd "$song" && npm ci && npm run build)
+            cp -r "$song/dist" "_site/$song"
+            echo "::endgroup::"
+          done
+          touch _site/.nojekyll
+
+      - name: Check the export CLI parses
+        run: for f in */scripts/export.mjs; do node --check "$f"; done
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          path: _site
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
