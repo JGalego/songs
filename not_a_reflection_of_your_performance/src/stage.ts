@@ -21,6 +21,8 @@ export class Stage {
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.OrthographicCamera(-W / 2, W / 2, H / 2, -H / 2, -10, 10);
   subtitles = true;
+  /** The headcount ticker (off for clean frames: posters, thumbnails). */
+  counter = true;
   private tex = new CanvasTex(W, H);
 
   constructor(private scenes: Scene[]) {
@@ -59,7 +61,7 @@ export class Stage {
       c.restore();
 
       this.drawSubtitle(c, t);
-      this.drawCounter(c, t);
+      if (this.counter) this.drawCounter(c, t);
       // wipes on the cuts: whichever boundary is closest
       for (const j of [i, i + 1]) {
         const n = this.scenes[j];

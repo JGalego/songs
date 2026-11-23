@@ -15,8 +15,8 @@ import songUrl from '../not_a_reflection_of_your_performance.mp3?url';
 import { Song } from './audio';
 import { AudioFeatures } from './features';
 import { shots } from './camera';
-import { Globe } from './globe';
-import { clamp, keyframes, window01 } from './math';
+import { Globe, Sun } from './globe';
+import { clamp, keyframes, smoothstep, window01 } from './math';
 import { Office } from './office';
 import { C } from './palette';
 import { RetroShader } from './post';
@@ -70,11 +70,14 @@ const sky = (() => {
 })();
 const black = new THREE.Color(0x000000);
 
-const globe = new Globe(6);
+const globe = await Globe.load(6);
 globe.group.position.set(0, 2, -14);
+const sun = new Sun();
 const office = new Office();
-scene.add(globe.group, office.group);
+scene.add(globe.group, sun.group, office.group);
 const stage = new Stage(SCENES);
+// ?clean: no lyrics and no headcount ticker (for posters and thumbnails)
+if (params.has('clean')) { stage.subtitles = false; stage.counter = false; }
 const cameraAt = shots();
 
 // ── post
@@ -93,6 +96,35 @@ composer.addPass(retro);
 const GLOBE_OPACITY: [number, number][] = [[158.4, 0], [PLANET, 1], [LAST_LIGHT + 0.6, 1], [OFFICE - 0.1, 0]];
 const OFFICE_OPACITY: [number, number][] = [[OFFICE, 0], [OFFICE + 0.01, 1], [CREDITS_START - 1, 1], [CREDITS_START - 0.2, 0]];
 const FADE: [number, number][] = [[0, 1], [1.2, 0], [DURATION - 1.4, 0], [DURATION, 1]];
+// "the thing that took your place": agent lights come on across the planet
+const AGENTS_IN: [number, number] = [200.9, 203.8];
+
+/**
+ * "So we're sunsetting your kind": the sun sinks behind the Earth. It's placed relative to the camera, in units of
+ * the globe's apparent radius (so it moves the same way across camera cuts), far behind the planet.
+ */
+const SUN_PATH = { t0: 204.7, t1: 209.6, from: [-0.72, 0.98], to: [-0.3, 0.48] };
+const sunTmp = { c: new THREE.Vector3(), d: new THREE.Vector3(), r: new THREE.Vector3(), u: new THREE.Vector3(), p: new THREE.Vector3(), dir: new THREE.Vector2() };
+function placeSun(t: number) {
+  const on = window01(t, SUN_PATH.t0 - 0.3, 210.4, 0.5);
+  if (on <= 0) { sun.update(sunTmp.p, 1, { disc: 0, glow: 0 }); return { dir: sunTmp.dir.set(0, 1), rim: 0 }; }
+  const { c, d, r, u, p, dir } = sunTmp;
+  globe.group.getWorldPosition(c);
+  d.subVectors(c, camera.position);
+  const dist = d.length(); d.normalize();
+  r.crossVectors(d, camera.up).normalize();
+  u.crossVectors(r, d);
+  const k = smoothstep(SUN_PATH.t0, SUN_PATH.t1, t);
+  const dx = SUN_PATH.from[0] + (SUN_PATH.to[0] - SUN_PATH.from[0]) * k, dy = SUN_PATH.from[1] + (SUN_PATH.to[1] - SUN_PATH.from[1]) * k;
+  const back = 60, scale = Math.tan(Math.asin(globe.radius / dist)) * (dist + back);
+  p.copy(c).addScaledVector(d, back).addScaledVector(r, dx * scale).addScaledVector(u, dy * scale);
+  const rho = Math.hypot(dx, dy); // 1 = on the limb
+  sun.update(p, scale * 0.22, { disc: on, glow: on * smoothstep(0.78, 1.12, rho) });
+  dir.set(dx, dy).normalize();
+  // the atmosphere flares as the disc reaches the limb, and holds a little after it has gone
+  return { dir, rim: on * smoothstep(1.45, 1.02, rho) * (0.35 + 0.65 * smoothstep(0.55, 0.95, rho)) };
+}
+
 const chorus = (t: number) => CHORUSES.reduce((a, [s, e]) => Math.max(a, window01(t, s, e, 1)), 0);
 
 const song = new Song(songUrl);
@@ -118,13 +150,6 @@ function render(t: number) {
     const species = keyframes(HEADCOUNT_SPECIES, t);
     globe.group.rotation.y = globe.lastPhi - Math.PI / 2 + 0.09 * (t - LAST_LIGHT);
     globe.group.rotation.x = 0.18;
-    globe.update(t, {
-      opacity: keyframes(GLOBE_OPACITY, t),
-      off: t < YOU_OUT ? 0 : clamp(1 - species / SPECIES),
-      last: t < LAST_LIGHT ? 1 : 0,
-      pulse: kick * final,
-      scale: H / 1080,
-    });
     office.update(t, keyframes(OFFICE_OPACITY, t));
 
     if (inOffice) {
@@ -137,6 +162,19 @@ function render(t: number) {
       camera.position.set(pos.x + Math.sin(t * 0.5) * 0.08, pos.y + Math.sin(t * 0.63) * 0.05 + kick * energy * 0.05, pos.z);
       camera.lookAt(look);
     }
+    camera.updateMatrixWorld();
+
+    const sunset = placeSun(t);
+    globe.update({
+      opacity: keyframes(GLOBE_OPACITY, t),
+      off: t < YOU_OUT ? 0 : clamp(1 - species / SPECIES),
+      last: t < LAST_LIGHT ? 1 : 0,
+      agents: smoothstep(AGENTS_IN[0], AGENTS_IN[1], t),
+      pulse: kick * final,
+      scale: H / 1080,
+      sunDir: sunset.dir,
+      sunAmt: sunset.rim,
+    });
     camera.fov = 40 - kick * energy * 1.6 - bass * final * 1.2;
     camera.updateProjectionMatrix();
 

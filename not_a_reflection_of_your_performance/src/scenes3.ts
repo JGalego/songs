@@ -390,43 +390,13 @@ export const scenes3: Scene[] = [
     },
   },
 
-  // ── the final chorus: the planet goes dark, and the lyrics play over it
-  {
-    name: 'finalA', t0: 191.6, t1: 195.3,
-    draw: ({ c, t }) => {
-      for (let i = 0; i < 16; i++) { const k = (t - 191.8 - i * 0.22); if (k < 0) continue; c.globalAlpha = Math.sin(clamp01(k / 3) * Math.PI) * 0.9; star(c, 220 + rnd(i * 2.3) * 1480, 900 - k * 190, 26 + rnd(i) * 16, 1); c.globalAlpha = 1; }
-      at(c, 330, 260, { s: pop(t, 192.2, 0.4) }, () => { card(c, 0, 0, 440, 170, { r: 20 }); txt(c, 'PERFORMANCE', -190, -40, { size: 20, weight: 800, color: C.lavender, spacing: 3 }); mono(c, '100%', -190, 28, { size: 70, weight: 700, color: C.green }); });
-    },
-  },
-  {
-    name: 'finalB', t0: 195.3, t1: 200.0,
-    draw: ({ c, t }) => {
-      for (let i = 0; i < 26; i++) { const k = t - 195.4 - i * 0.16; if (k < 0) continue; c.globalAlpha = Math.sin(clamp01(k / 3.2) * Math.PI); heart(c, 160 + rnd(i * 1.7) * 1600 + Math.sin(k * 2 + i) * 30, 960 - k * 210, 22 + rnd(i) * 14, i % 2 ? C.pink : C.peach); c.globalAlpha = 1; }
-      const f = 1 - smooth(198.6, 199.9, t);
-      at(c, 1580, 330, { s: pop(t, 195.5, 0.4) }, () => { card(c, 0, 0, 380, 160, { r: 20 }); txt(c, 'EFFORT', -150, -36, { size: 20, weight: 800, color: C.lavender, spacing: 3 }); mono(c, `${Math.round(f * 100)}%`, -150, 28, { size: 66, weight: 700, color: f > 0.5 ? C.teal : C.red }); });
-    },
-  },
-  {
-    name: 'finalC', t0: 200.0, t1: 204.65,
-    draw: ({ c, t }) => {
-      for (let i = 0; i < 9; i++) { const a = t * 0.5 + (i / 9) * Math.PI * 2, s = pop(t, 200.2 + i * 0.12, 0.35); at(c, cx + Math.cos(a) * 640, cy + 30 + Math.sin(a) * 260, { s }, () => agent(c, 0, 0, 34, t * 0.9 + i)); }
-      const q = pop(t, 203.4, 0.4);
-      at(c, cx, cy - 330, { s: q }, () => { tooth(c, 0, 0, 56); cross(c, 0, 0, 130, C.red, 0.12); });
-    },
-  },
-  {
-    name: 'finalD', t0: 204.65, t1: 210.1,
-    draw: ({ c, t }) => {
-      const p = ramp(t, 204.7, 209.8), sy = 230 + p * 760;
-      c.save(); c.globalAlpha = 0.55 * (1 - smooth(209, 210, t));
-      c.beginPath(); c.arc(430, sy, 190, 0, Math.PI * 2);
-      for (let i = 0; i < 8; i++) { const y = sy + 14 + i * 24, h = 3 + i * 2.6, dy = Math.min(189, Math.abs(y + h / 2 - sy)), ch = Math.sqrt(190 * 190 - dy * dy); c.rect(430 - ch, y, ch * 2, h); }
-      c.clip('evenodd'); const g = c.createLinearGradient(0, sy - 190, 0, sy + 190); g.addColorStop(0, '#ffe27a'); g.addColorStop(1, '#ff5fa2'); c.fillStyle = g; c.fillRect(240, sy - 190, 380, 380);
-      c.restore();
-      stamp(c, 1500, 330, 'SUNSET', 60, { a: smooth(205.9, 206.0, t), s: 1 + (1 - outBack((t - 205.9) / 0.22)) * 0.6, angle: -0.1 });
-      stamp(c, 1480, 520, 'SUNSET', 52, { a: smooth(208.3, 208.4, t), s: 1 + (1 - outBack((t - 208.3) / 0.22)) * 0.6, angle: 0.08 });
-    },
-  },
+  // ── the final chorus: only the Earth (3D, see globe.ts). Its city lights go out as 5 PM sweeps west, agent
+  //    lights come on in teal ("took your place"), and the sun sets behind it ("sunsetting your kind"). The empty
+  //    scenes keep the wipes on the camera cuts.
+  { name: 'finalA', t0: 191.6, t1: 195.3, draw: () => {} },
+  { name: 'finalB', t0: 195.3, t1: 200.0, draw: () => {} },
+  { name: 'finalC', t0: 200.0, t1: 204.65, draw: () => {} },
+  { name: 'finalD', t0: 204.65, t1: 210.1, draw: () => {} },
 
   // ── "The lights go out at five": the last badge
   {

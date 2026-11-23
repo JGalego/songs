@@ -18,12 +18,13 @@ export function shots() {
     high: GLOBE(16, { yaw: 30, pitch: 35, drift: -10 }),
     low: GLOBE(19, { yaw: -20, pitch: -25, drift: 12 }),
     close: GLOBE(12, { yaw: 8, pitch: -4, dolly: 0.15 }),
+    sunset: GLOBE(25, { yaw: -30, pitch: 8, drift: 6, dolly: 0.08 }), // room above the limb for the sun to set into
   } satisfies Record<string, Framing>;
 
   // [start, framing]: hard cuts on lyric entries
   const list: [number, Framing][] = [
     [0, F.beside], [172.3, F.front],
-    [191.6, F.front], [195.3, F.high], [200.0, F.low], [204.7, F.left], [208.2, F.close],
+    [191.6, F.front], [195.3, F.high], [200.0, F.low], [204.7, F.sunset], [208.2, F.close],
     [210.1, F.front], [216.9, F.close],
   ];
   const pos = new THREE.Vector3(), look = new THREE.Vector3();
