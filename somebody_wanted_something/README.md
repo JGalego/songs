@@ -1,0 +1,70 @@
+# Somebody Wanted Something — music video
+
+Song made with Suno; video rendered live in the browser with TypeScript + three.js.
+
+A museum walk through the future history of software, inspired by *In the Year 2525* and [year2525.xyz](https://year2525.xyz/).
+Every era removes one more step between wanting something and having it, and the interface disappears with it.
+At the end the walk reverses, down the "other wing" to fire, and then cuts back to forty open tabs.
+
+## Run
+
+```bash
+npm install
+npm run dev          # open the printed URL, click to start
+```
+
+| Key | Action |
+|---|---|
+| `space` | play / pause |
+| `←` / `→` | seek ±5 s (hold `shift` for ±1 s) |
+| `[` / `]` | previous / next section |
+| `L` | toggle lyrics |
+| `D` | debug overlay (time, section, shot, fps) |
+
+URL params: `?t=180` start at 180 s · `?res=1080` force render height · `?still=205` render one frozen frame (no audio, for screenshots).
+
+## Export an mp4 for YouTube
+
+```bash
+npm run export                         # 1080p60 → renders/somebody_wanted_something_1080p60.mp4
+npm run export -- --res 2160           # 4K (~4x slower to render)
+npm run export -- --from 86 --dur 5    # 5-second test slice
+npm run export -- --help               # all options
+```
+
+Same CLI as Song 1: starts Vite in-process, renders every frame in an off-screen Chrome window, pipes raw frames into ffmpeg
+with the song (H.264 High, BT.709, AAC 384 kbps, `+faststart`). Needs Google Chrome (or `CHROME_PATH`) and `ffmpeg` with libx264.
+On a laptop Iris Xe (WSL2) 1080p renders at ~6 fps, so the full video takes ~40 min.
+
+## How it works
+
+One particle system (72,000 points) draws every world. Each *shape* is a set of target points; at a shot change the
+particles stream from the old shape into the new one (`src/world.ts`). Shapes that move (the fold, the Chladni plate, the
+fire, the choir) are animated in the vertex shader, so every frame is still a pure function of the time `t`.
+
+## Where things live
+
+- `src/timeline.ts` — **all timing**: sections, lyrics (Whisper word timestamps), the shot sequence with camera framing,
+  the browser-chrome and year-counter curves, the dynamics of each shape, credits.
+- `src/world.ts` — the shape generators and the particle shader.
+- `src/hud.ts` — museum placard, year counter, browser chrome, the one-line prompt, subtitles, title, credits.
+- `src/main.ts` — renderer, camera, post-fx, live preview and the export hook.
+- `src/features.ts`, `post.ts`, `math.ts`, `text.ts`, `audio.ts` — shared with Song 1.
+- `scripts/export.mjs` — the `npm run export` CLI.
+
+## Story beats
+
+| Time | Beat |
+|---|---|
+| 0:00 | 2026: forty windows, a browser's tab strip, "Applications" |
+| 0:10 | Spoken: "Twenty twenty-six. Forty tabs open. You are the integration layer." |
+| 0:21 | **2525 Mandates**: the windows become a seal; the tab strip fades; one input line remains |
+| 0:46 | **3535 Cultivars**: a garden of trees, grown from the ground up |
+| 1:12 | **4545 Foldings**: a flat sheet folds itself into pleats |
+| 1:37 | **5555 Chorales**: twelve voices argue, then fall into unison |
+| 2:02 | **6565 Tilth**: terrain under a low sun, slowly reshaped |
+| 2:28 | **7510 Liturgies**: clauses on a curved wall; one struck out, one restored |
+| 2:53 | **9595 Resonances**: a vibrating plate; particles settle on its nodal lines |
+| 3:10 | The other wing: weather, choir, fold, tabs, touchscreen, beige box, punch card, abacus, a notch on a bone |
+| 3:29 | Fire, the first thing anyone wanted ("They wanted to be warm") |
+| 3:50 | A single ember, then a hard cut back to 2026 and forty tabs |

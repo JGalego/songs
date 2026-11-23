@@ -1,0 +1,26 @@
+{
+  "name": "somebody-wanted-something",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Music video for \"Somebody Wanted Something\" (Suno + three.js)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "export": "node scripts/export.mjs"
+  },
+  "dependencies": {
+    "@fontsource/eb-garamond": "^5.2.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/three": "^0.187.0",
+    "playwright-core": "^1.65.1",
+    "typescript": "^7.0.2",
+    "vite": "^6.4.6"
+  }
+}

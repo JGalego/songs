@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Somebody Wanted Something</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+      #stage { position: fixed; inset: 0; display: grid; place-items: center; }
+      canvas { display: block; background: #000; }
+      #start {
+        position: fixed; inset: 0; display: grid; place-items: center; cursor: pointer;
+        color: #e8e1d4; font: 400 30px "EB Garamond", Georgia, serif; font-style: italic; letter-spacing: 0.08em; background: #000;
+      }
+      #debug {
+        position: fixed; left: 8px; top: 8px; padding: 6px 10px; display: none; white-space: pre;
+        color: #9f9; background: rgba(0,0,0,.7); font: 12px "JetBrains Mono", monospace; pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <div id="start">[ click to enter the museum ]</div>
+    <div id="debug"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
