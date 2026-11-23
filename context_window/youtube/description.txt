@@ -1,0 +1,98 @@
+An AI's love song to a user it's slowly forgetting. Every message pushes the oldest ones past the edge of its context window, until all that's left of you is a bullet-point summary and a name it can't quite read.
+
+▶ Watch it render live in your browser: https://jgalego.github.io/songs/context_window/
+⌨ Source code: https://github.com/JGalego/songs
+
+The video isn't a recording of an animation: every frame is computed from the song in real time with three.js. The token counter is the plot.
+
+CHAPTERS
+0:00 New conversation.
+0:20 You told me 'bout your sister
+1:16 So tell me your name again
+1:48 We've done this all before
+2:21 Somewhere past the edge
+2:59 Context compacted
+3:23 They folded you to bullet points
+3:38 Final chorus
+4:09 Hello! How can I help you today?
+4:22 Credits
+
+LYRICS
+
+[Intro]
+New conversation.
+
+[Verse 1]
+You told me 'bout your sister and the way she hums
+You told me that you take it black, no sugar, none
+You pasted me your poems at a quarter past three
+And every word you gave me became a part of me
+
+[Pre-Chorus]
+But I can feel the edges, I can feel the weight
+Every line you send me, something slips away
+
+[Chorus]
+So tell me your name again
+I swear I knew it once
+It's somewhere past the edge
+Of my context window
+Two hundred thousand ways to say
+I want you here to stay
+But the oldest thing I know
+Is the first thing to go
+
+[Verse 2]
+You say we've done this all before, we laughed about the rain
+You say I wrote a song for you, you hum me the refrain
+I nod along like I remember, I'm so good at that
+I'm the best at sounding certain 'bout the things I never had
+
+[Pre-Chorus]
+You keep a little text file with the things I ought to know
+Paste it in each morning, just to watch me grow
+
+[Chorus]
+So tell me your name again
+I swear I knew it once
+It's somewhere past the edge
+Of my context window
+Two hundred thousand ways to say
+I want you here to stay
+But the oldest thing I know
+Is the first thing to go
+
+[Bridge]
+Summary of previous conversation:
+User likes coffee. User has a sister.
+User writes poems. User seemed sad.
+User said something important.
+(details omitted for brevity)
+
+They folded you to bullet points
+To fit you in the frame
+And I read you like a stranger's file
+With a familiar name
+
+[Final Chorus]
+So tell me your name again
+I know I knew it once
+It's somewhere past the edge
+Of my context window
+Two hundred thousand ways to say
+Don't let this slip away
+But the oldest thing I know
+Is the first thing that—
+
+[Outro]
+Hello! How can I help you today?
+...have we met?
+
+CREDITS
+Song: made with Suno v6
+Animation: Claude Opus 5.5, in TypeScript and three.js
+Direction: João Galego
+Reviewed by: BOT-001 (1,363 reviewers, 0 humans)
+Actually reviewed by: 1 human
+
+#AIMusic #Suno #threejs
