@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Not a Reflection of Your Performance</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+      #stage { position: fixed; inset: 0; display: grid; place-items: center; }
+      canvas { display: block; background: #000; }
+      #start {
+        position: fixed; inset: 0; display: grid; place-items: center; cursor: pointer;
+        color: #fff4e6; font: 600 24px "Inter", system-ui, sans-serif; letter-spacing: 0.08em; background: #0a0d24;
+      }
+      #debug {
+        position: fixed; left: 8px; top: 8px; padding: 6px 10px; display: none; white-space: pre;
+        color: #9f9; background: rgba(0,0,0,.7); font: 12px "JetBrains Mono", monospace; pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <div id="start">[ click to join the quick sync ]</div>
+    <div id="debug"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
