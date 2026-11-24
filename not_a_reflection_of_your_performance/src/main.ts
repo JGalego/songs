@@ -78,6 +78,7 @@ scene.add(globe.group, sun.group, office.group);
 const stage = new Stage(SCENES);
 // ?clean: no lyrics and no headcount ticker (for posters and thumbnails)
 if (params.has('clean')) { stage.subtitles = false; stage.counter = false; }
+if (params.has('nolyrics')) stage.subtitles = false; // keep the headcount ticker, drop the lyrics
 const cameraAt = shots();
 
 // ── post

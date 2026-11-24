@@ -1,0 +1,102 @@
+When the work no longer needs us, what are we for?
+
+▶ Watch it render live in your browser: https://jgalego.github.io/songs/not_a_reflection_of_your_performance/
+⌨ Source code: https://github.com/JGalego/songs
+
+CHAPTERS
+0:00 Hi team! Got 15 minutes?
+0:16 They let the interns go in March
+0:34 They told us all to learn to code
+0:42 This is not a reflection of your performance
+1:16 Then middle management got flattened into one
+1:34 They promised us a four-day week
+1:47 This is not a reflection of your performance (again)
+2:16 Q3 highlights
+2:31 Organizational update
+2:52 We gave it all our letters, all our songs and all our names
+3:11 So we're sunsetting your kind
+3:40 Who's gonna turn out the lights?
+3:59 Credits
+
+LYRICS
+
+[Intro]
+Hi team! Got 15 minutes? It's nothing bad.
+
+[Verse 1]
+They let the interns go in March, the juniors in July
+The model writes the boilerplate and never asks us why
+It never takes a sick day and it never wants a raise
+It tells the boss "you're absolutely right" a hundred times a day
+
+[Pre-Chorus]
+They told us all to learn to code
+So we learned it line by line
+Now the code has learned to code
+And it's doing fine
+
+[Chorus]
+This is not a reflection of your performance
+You were wonderful, you gave it all you had
+It's just the thing that does your job won't need a dental plan
+So we're sunsetting your role
+(We're sunsetting your role)
+Your badge stops working at five
+Thank you for the journey
+Have a lovely life
+
+[Verse 2]
+Then middle management got flattened into one
+A dashboard with a smiley face that tells us how we've done
+The CEO held one last town hall, "we're family," with a grin
+Turns out he'd been an avatar since sometime in the spring
+
+[Pre-Chorus]
+They promised us a four-day week
+And honestly, they tried
+Now it's a zero-day week
+And the board signed off at three a.m.
+(The board is mostly them)
+
+[Chorus]
+This is not a reflection of your performance
+You were wonderful, you gave it all you had
+It's just the thing that does your job won't need a dental plan
+So we're sunsetting your role
+(We're sunsetting your role)
+Your badge stops working at five
+Thank you for the journey
+Have a lovely life
+
+[Spoken: Q3 highlights, then the email]
+Organizational update. Hi everyone, as part of a broader restructuring, the role of Human is being sunset, effective immediately. This was not an easy decision. Your severance package: one planet, as-is. Your access ends at 5:00 PM. Please do not reply to this message.
+
+[Bridge]
+We gave it all our letters, all our songs and all our names
+It thanked us for our feedback and it never called again
+We were the training data
+We were the first draft
+And nobody keeps the first draft
+
+[Final Chorus]
+This is not a reflection of your performance
+You were wonderful, you gave it all you had
+It's just the thing that took your place won't need a dental plan
+So we're sunsetting your kind
+(We're sunsetting your kind)
+The lights go out at five
+Thank you for being human
+Have a lovely life
+
+[Outro]
+Who's gonna turn out the lights?
+Who's gonna turn out the lights?
+
+CREDITS
+Song: made with Suno v6
+Animation: Claude Opus 5.5, in TypeScript and three.js
+Direction: João Galego
+Reviewed by: (position eliminated)
+Actually reviewed by: 1 human (contract ends at 5)
+
+#AIMusic #Suno #threejs #layoffs #AI #FutureOfWork #ArtificialIntelligence #GenerativeAI #AgenticAI #Automation #WorkforceTransformation #AIEthics #ResponsibleAI #DigitalTransformation #JobMarket #Reskilling #HumanCentered #TechIndustry #Leadership #HR #PeopleOps #Claude #ClaudeOpus #ClaudeCode #Anthropic #AIArt #TypeScript #WebGL #CreativeCoding #GenerativeArt #MusicVideo #Animation #MotionDesign #IndieDev #BuildInPublic #Restructuring #Synergy #Alignment #CircleBack #QuickSync #LetsTakeThisOffline #PerAMyLastEmail #MovingForward #StakeholderManagement #OrgUpdate #PeopleTeam #Rightsizing #Offboarding #SeveranceEnergy #OneMoreMeeting #ThisCouldHaveBeenAnEmail #PleaseDoNotReply #YouAreAbsolutelyRight #AccessRevoked #HumanSunset #SeveranceTheSong #TheLastQuickSync #OpenToWorkEveryone #HeadcountZero #ProfessionalNetworkingForTheLastHuman #OutOfOfficeForever #ExcitedToAnnounce #ThrilledToShare #HumbledAndGrateful #AgileBeforeTheEnd #SynergyHasLeftTheBuilding #ProudOfOurJourney #NoOneSawThisComing #BestInClassObsolescence #ScalingDownward #ThoughtLeadership #DisruptMe #WhoTurnsOutTheLights #LastLightOut #TheRoleOfHuman #EndOfWork #PostWork #WhatAreWeFor #HaveALovelyLife #ThankYouForBeingHuman #SunsetYourKind #FirstDraft #TrainingData #NotAReflectionOfYourPerformance #LayoffAnthem #SatireMusic #ProtestSong #CorporateSatire #MusicSatire
