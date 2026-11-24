@@ -1,13 +1,72 @@
 import {
-  agent, appWindow, at, avatar, avatarColor, blink, card, check, clamp01, confetti, cross, gradCap, lerp, mono, outBack,
+  agent, appWindow, at, avatar, chatIcon, infoCard, type ChatIcon, avatarColor, blink, card, check, clamp01, confetti, cross, gradCap, lerp, mono, outBack,
   person, pill, pointer, pop, ramp, rnd, rr, smooth, stamp, txt, typed, fmt, wobble,
 } from './art';
+import { drawCode } from './code';
+import { SANS } from './text';
 import { C } from './palette';
 import { H, W, type Scene } from './scene';
 
 const NAVY: [string, string] = [C.bgTop, C.bgBottom];
 const cx = W / 2, cy = H / 2 - 30;
 const BEAT = 60 / 110.98;
+
+
+// ── the code on screen
+const rustGetter = (f: string, ty = '&str', body = `&self.${f}`) => `    pub fn ${f}(&self) -> ${ty} { ${body} }`;
+const rustSetter = (f: string) => `    pub fn set_${f}(&mut self, ${f}: String) { self.${f} = ${f}; }`;
+const RUST_BOILERPLATE: string[] = [
+  'use anyhow::Result;',
+  'use serde::{Deserialize, Serialize};',
+  '',
+  '#[derive(Debug, Clone, Default, Serialize, Deserialize)]',
+  'pub struct User {',
+  '    id: String,',
+  '    name: String,',
+  '    email: String,',
+  '    phone: String,',
+  '}',
+  '',
+  'impl User {',
+  ...['id', 'name', 'email'].flatMap((f) => [rustGetter(f), rustSetter(f), '']),
+  rustGetter('phone') + ' // TODO: ask why',
+  rustSetter('phone'),
+  '',
+  rustGetter('role', 'Role', 'Role::Human') + ' // deprecated',
+  '',
+  rustGetter('soul', 'Option<&str>', 'None'),
+  '',
+  rustGetter('status', 'Status', 'Status::Redundant'),
+  '',
+  '    pub fn ask_why(&self) -> Result<()> { unimplemented!() }',
+  '}',
+];
+const PY_LEARN = [
+  'import this  # the zen of python',
+  'from humans import code',
+  '',
+  'def learn(model, corpus):',
+  '    for line in corpus:',
+  '        loss = model.read(line)',
+  '        model.update(loss)',
+  '    return model  # not a reflection of you',
+  '',
+  'agent = learn(Agent(), code.everything())',
+];
+const TS_AGENT = [
+  'import { model, tools } from "./world";',
+  '',
+  'async function agent(task: string) {',
+  '  const ctx = [task];',
+  '  while (true) {',
+  '    const act = await model.think(ctx);',
+  '    // await human.approve(act);',
+  '    if (act.done) return ctx;',
+  '    ctx.push(await tools.run(act));',
+  '  }',
+  '}',
+  'agent("write agent.ts"); // see: agent.ts',
+];
 
 export const scenes1: Scene[] = [
   // ── 0:00 "Hi team! Got 15 minutes? It's nothing bad."
@@ -141,28 +200,27 @@ export const scenes1: Scene[] = [
   {
     name: 'boilerplate', t0: 21.5, t1: 25.45, bg: ['#0c0e24', '#161236'],
     draw: ({ c, t }) => {
-      const fields = ['Id', 'Name', 'Email', 'Phone', 'Address', 'Role', 'Status', 'Created', 'Updated', 'Owner'];
-      const lines: string[] = ['package com.acme.core.service.impl;', '', '@Service', 'public class UserServiceImpl implements UserService {', '  private final UserRepository userRepository;', '  private final UserMapper userMapper;', ''];
-      for (const f of fields) { lines.push(`  public String get${f}() { return ${f.toLowerCase()}; }`); lines.push(`  public void set${f}(String ${f.toLowerCase()}) { this.${f.toLowerCase()} = ${f.toLowerCase()}; }`); lines.push(''); }
-      const cps = 210, chars = Math.max(0, (t - 21.6) * cps);
-      const win = appWindow(c, cx - 140, cy + 10, 1280, 640, 'UserServiceImpl.java', { dark: true });
-      let used = 0, shown = 0;
+      const lines = RUST_BOILERPLATE;
+      const total = lines.reduce((n, l) => n + l.length + 1, 0), cps = total / 3.4, chars = Math.max(0, (t - 21.6) * cps);
+      const win = appWindow(c, cx - 140, cy + 10, 1280, 640, 'src/user.rs', { dark: true });
+      let used = 0;
       const out: string[] = [];
-      for (const ln of lines) { if (used + ln.length + 1 > chars) { out.push(ln.slice(0, Math.max(0, chars - used))); break; } out.push(ln); used += ln.length + 1; shown++; }
+      for (const ln of lines) { if (used + ln.length + 1 > chars) { out.push(ln.slice(0, Math.max(0, chars - used))); break; } out.push(ln); used += ln.length + 1; }
       const vis = 13, first = Math.max(0, out.length - vis);
       out.slice(first).forEach((ln, i) => {
         const y = win.y + 40 + i * 36;
         mono(c, String(first + i + 1).padStart(3, ' '), win.x + 40, y, { size: 22, color: 'rgba(255,244,230,0.3)' });
-        mono(c, ln, win.x + 110, y, { size: 25, color: ln.includes('public') || ln.includes('class') ? C.pink : ln.includes('@') ? C.teal : C.cream, max: win.w - 150 });
+        drawCode(c, ln, win.x + 110, y, { lang: 'rust', size: 25, max: win.w - 150 });
       });
       pill(c, win.x + win.w - 30, win.y - 28, '◆ agent-017 · writing', { size: 18, bg: C.tealDeep, fg: C.teal, align: 'right' });
       mono(c, `+${fmt((t - 21.5) * 1050)} lines`, win.x + 40, win.y + win.h - 34, { size: 26, weight: 700, color: C.teal });
       // "...and never asks us why"
       const s = pop(t, 23.2, 0.4);
       at(c, 1680, 770, { s, a: clamp01(s * 2) }, () => {
-        card(c, 0, 0, 380, 220);
-        txt(c, 'QUESTIONS ASKED', 0, -66, { size: 20, weight: 800, color: C.inkSoft, align: 'center', spacing: 3 });
-        mono(c, '0', 0, 8, { size: 110, weight: 700, color: C.ink, align: 'center' });
+        infoCard(c, { minW: 380, minH: 220, align: 'center', r: 26, lineGap: 20, lines: [
+          { text: 'QUESTIONS ASKED', size: 20, weight: 800, color: C.inkSoft, spacing: 3 },
+          { text: '0', size: 110, weight: 700, color: C.ink, mono: true },
+        ] });
       });
     },
   },
@@ -209,7 +267,7 @@ export const scenes1: Scene[] = [
       // a wall of replies fills in behind the chat
       for (let i = 0; i < Math.min(n, 100); i++) {
         const x = rnd(i * 1.3) * W, y = 160 + rnd(i * 2.9) * 700, s = 0.7 + rnd(i * 4.1) * 0.5, p = pop(t, t0 + Math.log(i + 1) / Math.log(100) * (33.5 - t0), 0.3);
-        at(c, x, y, { s: s * p, a: 0.55 * clamp01(p * 2), rot: (rnd(i * 5.3) - 0.5) * 0.5 }, () => { rr(c, -150, -26, 300, 52, 26); c.fillStyle = C.teal; c.fill(); txt(c, "You're absolutely right!", 0, 1, { size: 22, weight: 700, color: C.tealDeep, align: 'center' }); });
+        at(c, x, y, { s: s * p, a: 0.55 * clamp01(p * 2), rot: (rnd(i * 5.3) - 0.5) * 0.5 }, () => { rr(c, -150, -26, 300, 52, 26); c.fillStyle = C.teal; c.fill(); chatIcon(c, 'bot', -122, 0, 16, C.teal, C.tealDeep); txt(c, "You're absolutely right!", 20, 1, { size: 22, weight: 700, color: C.tealDeep, align: 'center', max: 225 }); });
       }
       const w = appWindow(c, cx, cy + 10, 820, 640, 'Messages · Boss');
       const asks = ['Thoughts?', 'What about this?', 'Ship it?', 'Is this good?', 'Be honest.', 'Right?!', 'Agree?', '...?'];
@@ -217,10 +275,16 @@ export const scenes1: Scene[] = [
       for (let i = 0; i < 4; i++) {
         const j = count - 1 - i; if (j < 0) break;
         const y = w.y + w.h - 100 - i * 130;
-        rr(c, w.x + 40, y - 80, 300, 54, 27); c.fillStyle = '#efe9de'; c.fill();
-        txt(c, asks[j], w.x + 190, y - 53, { size: 24, weight: 600, align: 'center', max: 260 });
-        rr(c, w.x + w.w - 420, y - 30, 380, 54, 27); c.fillStyle = C.teal; c.fill();
-        txt(c, "You're absolutely right!", w.x + w.w - 230, y - 3, { size: 24, weight: 700, color: C.tealDeep, align: 'center', max: 350 });
+        // one icon for the boss (a person), one for the agent; icon + text centred as a block in each bubble
+        const bubble = (bx: number, by: number, bw: number, label: string, weight: number, color: string, fill: string, icon: ChatIcon, iconColor: string, iconBg: string) => {
+          rr(c, bx, by - 27, bw, 54, 27); c.fillStyle = fill; c.fill();
+          const maxText = bw - 48 - 52;
+          c.font = `${weight} 24px ${SANS}`; const tw = Math.min(maxText, c.measureText(label).width), left = bx + bw / 2 - (52 + tw) / 2;
+          chatIcon(c, icon, left + 20, by, 20, iconColor, iconBg);
+          txt(c, label, left + 52, by, { size: 24, weight, color, max: maxText });
+        };
+        bubble(w.x + 40, y - 53, 300, asks[j], 600, C.ink, '#efe9de', 'person', C.lavender, '#fff');
+        bubble(w.x + w.w - 420, y - 3, 380, "You're absolutely right!", 700, C.tealDeep, C.teal, 'bot', C.teal, C.tealDeep);
       }
       at(c, cx + 410, cy - 280, { s: 1 + 0.15 * Math.sin(t * 20) * (n < 100 ? 0.3 : 0.0) + (n === 100 ? pop(t, 33.5, 0.3) * 0.3 : 0) }, () => pill(c, 0, 0, `×${n}`, { size: 54, bg: C.pink, fg: '#fff', align: 'center' }));
     },
@@ -247,15 +311,14 @@ export const scenes1: Scene[] = [
   {
     name: 'lines', t0: 36.0, t1: 38.3, bg: ['#0c1228', '#1a1238'],
     draw: ({ c, t }) => {
-      const win = appWindow(c, cx, cy + 10, 1100, 620, 'hello.py', { dark: true });
-      const code = ['print("Hello, world!")', 'name = input("Who are you? ")', 'for i in range(10):', '    print(i * 2)', 'if name == "you":', '    print("welcome")', 'def add(a, b):', '    return a + b', 'print(add(2, 2))', '# it works!'];
-      const reading = (t - 36.1) / BEAT;
-      code.forEach((ln, i) => {
-        const y = win.y + 50 + i * 50, on = i <= Math.floor(reading);
-        if (i === Math.floor(reading)) { c.fillStyle = 'rgba(255,207,110,0.18)'; c.fillRect(win.x + 20, y - 24, win.w - 40, 48); c.fillStyle = C.sun; c.fillRect(win.x + 20, y - 24, 6, 48); }
+      const win = appWindow(c, cx, cy + 10, 1100, 620, 'learn.py', { dark: true });
+      const reading = 10 * Math.pow(ramp(t, 36.1, 38.2), 1.4); // one line at a time, faster as it gets the hang of it
+      PY_LEARN.forEach((ln, i) => {
+        const y = win.y + 50 + i * 50, cur = Math.floor(reading), on = i <= cur;
+        if (i === cur) { c.fillStyle = 'rgba(255,207,110,0.18)'; c.fillRect(win.x + 20, y - 24, win.w - 40, 48); c.fillStyle = C.sun; c.fillRect(win.x + 20, y - 24, 6, 48); }
         mono(c, String(i + 1), win.x + 60, y, { size: 24, color: 'rgba(255,244,230,0.3)', align: 'right' });
-        mono(c, ln, win.x + 100, y, { size: 30, color: on ? C.cream : 'rgba(255,244,230,0.2)', max: win.w - 220 });
-        if (on && i < Math.floor(reading)) check(c, win.x + win.w - 60, y, 20, C.green);
+        drawCode(c, ln, win.x + 100, y, { lang: 'python', size: 28, max: win.w - 220, alpha: on ? 1 : 0.3 });
+        if (on && i < cur && ln.trim()) check(c, win.x + win.w - 60, y, 20, C.green);
       });
       const pct = Math.min(100, Math.floor(ramp(t, 36.1, 38.1) * 100));
       c.fillStyle = 'rgba(255,244,230,0.14)'; c.fillRect(win.x + 40, win.y + win.h - 40, win.w - 80, 10);
@@ -268,21 +331,31 @@ export const scenes1: Scene[] = [
   {
     name: 'droste', t0: 38.3, t1: 40.45, bg: ['#161038', '#0c1a30'],
     draw: ({ c, t, k }) => {
-      const zoom = Math.pow(1 / 0.6, ramp(t, 38.3, 40.45) * 1.0);
-      const code = ['function write(code) {', '  return write(code);', '}'];
-      for (let d = 0; d < 8; d++) { // largest first, so each smaller window sits on top
-        const s = zoom * Math.pow(0.6, d - 0 + 0);
-        if (s > 6 || s < 0.05) continue;
-        const dark = d % 2 === 0;
-        c.save(); c.translate(cx, cy + 10); c.scale(s, s);
-        const w = 1100, h = 620;
+      // every window holds the code on the left and, in its preview pane, a smaller copy of the whole window
+      const w = 1560, h = 700, r = 0.34, fx = 470 / (1 - r), fy = 10 / (1 - r); // preview centre (470, 10) and the zoom's fixed point
+      const zoom = Math.pow(1 / r, ramp(t, 38.3, 40.45));
+      c.save();
+      c.translate(cx + fx * (1 - zoom), cy + 40 + fy * (1 - zoom)); c.scale(zoom, zoom);
+      for (let d = 0; d < 6; d++) { // largest first, so each smaller window sits on top
+        const sc = Math.pow(r, d), q = (1 - sc), dark = d % 2 === 0, th = dark ? 'dark' : 'light';
+        if (sc * zoom < 0.02) continue;
+        c.save(); c.translate(fx * q, fy * q); c.scale(sc, sc);
         card(c, 0, 0, w, h, { fill: dark ? '#171a33' : C.card, r: 22, shadow: 30 });
         c.fillStyle = dark ? '#22264a' : '#efe9de'; rr(c, -w / 2, -h / 2, w, 56, [22, 22, 0, 0]); c.fill();
         ['#ff5f57', '#febc2e', '#28c840'].forEach((col, i) => { c.beginPath(); c.arc(-w / 2 + 32 + i * 28, -h / 2 + 28, 9, 0, Math.PI * 2); c.fillStyle = col; c.fill(); });
         txt(c, 'agent.ts', 0, -h / 2 + 28, { size: 22, weight: 600, color: dark ? 'rgba(255,244,230,0.6)' : C.inkSoft, align: 'center' });
-        code.forEach((ln, i) => mono(c, ln, -w / 2 + 50, -h / 2 + 100 + i * 40, { size: 28, color: dark ? C.cream : C.ink }));
+        TS_AGENT.forEach((ln, i) => {
+          const y = -h / 2 + 96 + i * 40;
+          mono(c, String(i + 1), -w / 2 + 70, y, { size: 20, color: dark ? 'rgba(255,244,230,0.28)' : 'rgba(27,29,58,0.28)', align: 'right' });
+          drawCode(c, ln, -w / 2 + 96, y, { lang: 'ts', size: 24, theme: th, max: 800 });
+        });
+        c.fillStyle = dark ? 'rgba(255,244,230,0.05)' : 'rgba(27,29,58,0.04)'; rr(c, 200, -h / 2 + 76, 560, h - 76 - 20, 14); c.fill();
+        mono(c, 'PREVIEW', 220, -h / 2 + 100, { size: 16, weight: 700, color: dark ? 'rgba(255,244,230,0.35)' : 'rgba(27,29,58,0.4)', spacing: 3 });
+        c.fillStyle = dark ? '#0e1226' : '#e9e3d9'; rr(c, 200, 190, 560, 150, 14); c.fill();
+        ['$ node agent.ts', '▸ task: "write agent.ts"', '✓ wrote agent.ts (12 lines)'].forEach((ln, i) => mono(c, ln, 220, 218 + i * 36, { size: 20, color: i === 2 ? (dark ? C.green : '#1f9d68') : dark ? 'rgba(255,244,230,0.7)' : C.inkSoft, max: 520 }));
         c.restore();
       }
+      c.restore();
       void k;
     },
   },

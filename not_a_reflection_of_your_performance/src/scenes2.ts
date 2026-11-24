@@ -1,5 +1,5 @@
 import {
-  agent, appWindow, at, avatarColor, blink, card, check, clamp01, confetti, cross, frame, heart, inCubic, lerp,
+  infoCard, agent, appWindow, at, avatarColor, blink, card, check, clamp01, confetti, cross, frame, heart, inCubic, lerp,
   mono, mug, outBack, outCubic, palm, person, pill, plant, pop, ramp, rnd, rr, smiley, smooth, star, stamp, sunset, tooth,
   txt, typed, wobble, fmt,
 } from './art';
@@ -8,6 +8,8 @@ import { W, type Scene } from './scene';
 
 const cx = W / 2, cy = 510;
 const DARK: [string, string] = ['#000', '#000'];
+
+const EMOJI_FONTS = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 
 export const scenes2: Scene[] = [
   // ── 0:43 "This is not a reflection of your performance"
@@ -36,9 +38,24 @@ export const scenes2: Scene[] = [
         const g = c.createLinearGradient(-150, -250, 150, 250); g.addColorStop(0, '#dff3ff'); g.addColorStop(1, '#b9c8ff'); c.fillStyle = g; c.fill();
         c.lineWidth = 16; c.strokeStyle = C.sun; c.stroke();
         c.save(); c.beginPath(); c.ellipse(0, 0, 160, 260, 0, 0, Math.PI * 2); c.clip();
-        c.globalAlpha = 0.5 * (1 - smooth(44.6, 45.6, t));
-        c.scale(-0.2, 0.2); card(c, 0, 0, 940, 680, { shadow: 0 });
+        // the reflection is you: pleased with five stars, then the 62% lands
+        const k = smooth(44.7, 45.1, t), bl = (t * 0.9) % 3.1 > 3.0 ? 0.15 : 1; // a slow blink now and then
+        const hy = 20 + 4 * Math.sin(t * 2);
+        c.fillStyle = C.lavender; c.beginPath(); c.ellipse(0, 250, 120, 110, 0, Math.PI, 0); c.fill(); // shoulders
+        c.fillStyle = '#ffd9bd'; c.fillRect(-18, hy + 40, 36, 50); // neck
+        c.beginPath(); c.arc(0, hy, 78, 0, Math.PI * 2); c.fill(); // head
+        c.fillStyle = C.ink; c.beginPath(); c.arc(0, hy - 8, 80, Math.PI * 1.04, Math.PI * 1.96); c.quadraticCurveTo(30, hy - 52, -80, hy - 14); c.fill(); // hair
+        const er = 15 + 6 * k, look = -5 * k; // eyes go wide, pupils shrink and slide toward the card
+        for (const ex of [-30, 30]) {
+          c.fillStyle = '#fff'; c.beginPath(); c.ellipse(ex, hy + 2, er, er * bl, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = C.ink; c.beginPath(); c.arc(ex + look, hy + 2, 6 - 2 * k, 0, Math.PI * 2); c.fill();
+          c.lineWidth = 6; c.lineCap = 'round'; c.strokeStyle = C.ink; c.beginPath(); c.moveTo(ex - 18, hy - 28 - 14 * k); c.quadraticCurveTo(ex, hy - 38 - 18 * k, ex + 18, hy - 28 - 14 * k); c.stroke(); // brows climb
+        }
+        if (k < 1) { c.globalAlpha *= 1 - k; c.lineWidth = 6; c.strokeStyle = C.ink; c.beginPath(); c.arc(0, hy + 24, 28, 0.2 * Math.PI, 0.8 * Math.PI); c.stroke(); c.globalAlpha /= 1 - k || 1; }
+        if (k > 0) { c.globalAlpha *= k; c.fillStyle = C.ink; c.beginPath(); c.ellipse(0, hy + 44, 13, 17, 0, 0, Math.PI * 2); c.fill(); c.globalAlpha /= k || 1; }
+        if (k > 0.5) { const q = smooth(45.0, 45.3, t); c.fillStyle = '#8ec5ff'; c.beginPath(); c.moveTo(70, hy - 40 + q * 10); c.quadraticCurveTo(84, hy - 10 + q * 10, 70, hy - 4 + q * 10); c.quadraticCurveTo(56, hy - 10 + q * 10, 70, hy - 40 + q * 10); c.fill(); }
         c.restore();
+        if (k > 0.3) mono(c, '?', 92, -172 + 6 * Math.sin(t * 5), { size: 64, weight: 700, color: C.ink, align: 'center', alpha: smooth(44.9, 45.2, t) });
         c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.ellipse(-70, -120, 22, 90, 0.4, 0, Math.PI * 2); c.fill();
       });
     },
@@ -175,47 +192,114 @@ export const scenes2: Scene[] = [
   // ── 1:03 "Thank you for the journey"
   {
     name: 'journey', t0: 63.25, t1: 67.0, bg: ['#0c1632', '#2a1446'], glow: [C.sun, C.pink, C.lavender],
-    // the career as snakes and ladders: hop, climb the ladder, reach the top row, land on the snake, slide out the door
+    // the career as snakes and ladders: roll, promotion ladder, reorg snake, roll, another ladder,
+    // dodge the last snake, reach Finish… and Finish is where they show you the door
     draw: ({ c, t }) => {
-      const TS = 128, COLS = 7, ROWS = 4, bx0 = cx - 60 - (COLS * TS) / 2, by1 = cy + 40 + (ROWS * TS) / 2;
+      const BX = cx - 70, BY = cy + 20;
+      // a proper board: 1 bottom-left, rows snaking up, an odd row count so Finish (35) lands top-right, next to the exit
+      const TS = 112, COLS = 7, ROWS = 5, bx0 = BX - (COLS * TS) / 2, bx1 = bx0 + COLS * TS, by1 = BY + (ROWS * TS) / 2;
       const tile = (n: number): [number, number] => {
         const r = Math.floor((n - 1) / COLS), i = (n - 1) % COLS, col = r % 2 ? COLS - 1 - i : i;
         return [bx0 + col * TS + TS / 2, by1 - r * TS - TS / 2];
       };
       const beat = (n: number) => 0.267 + n * BEAT;
       const board = pop(t, 63.25, 0.45);
-      // the snakes, head first (Catmull-Rom through the waypoints)
-      const curve = (pts: [number, number][], n = 140) => {
-        const out: [number, number][] = [];
-        for (let i = 0; i < n; i++) {
-          const f = (i / (n - 1)) * (pts.length - 1), k = Math.min(pts.length - 2, Math.floor(f)), u = f - k;
-          const p0 = pts[Math.max(0, k - 1)], p1 = pts[k], p2 = pts[k + 1], p3 = pts[Math.min(pts.length - 1, k + 2)];
-          const cr = (a: number, b: number, d: number, e: number) => 0.5 * (2 * b + (-a + d) * u + (2 * a - 5 * b + 4 * d - e) * u * u + (-a + 3 * b - 3 * d + e) * u * u * u);
-          out.push([cr(p0[0], p1[0], p2[0], p3[0]), cr(p0[1], p1[1], p2[1], p3[1])]);
-        }
-        return out;
+      const door: [number, number] = [bx1 + 180, by1];
+      type P2 = [number, number];
+      // a lazy slither: a sideways wave running down the body, pinned at head and tail
+      const slither = (pts: P2[], amp: number, ph: number): P2[] => pts.map((p, i) => {
+        const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+        const u = i / (pts.length - 1), w = amp * Math.sin(Math.PI * u) * Math.sin(u * 10 - ph);
+        return [p[0] - ((b[1] - a[1]) / L) * w, p[1] + ((b[0] - a[0]) / L) * w];
+      });
+      // a classic board snake: S-curves along a straight run, the neck leaving the head straight
+      const wavy = (a: P2, b: P2, amp: number, waves: number, n = 110): P2[] => {
+        const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L;
+        return Array.from({ length: n }, (_, i) => {
+          const u = i / (n - 1), w = amp * Math.sin(u * waves * Math.PI * 2) * smooth(0, 0.22, u);
+          return [a[0] + dx * u + nx * w, a[1] + dy * u + ny * w] as P2;
+        });
       };
-      const door: [number, number] = [bx0 + COLS * TS + 230, by1];
-      const big = curve([tile(22), [1190, 420], [1150, 505], [1250, 565], [1330, 630], [1290, 705], [1380, 772], [1470, 792], [door[0] - 30, by1 - 14]]);
-      const small = curve([tile(28), [470, 440], [560, 520], [500, 610], [600, 690], tile(2)], 90);
-      const snake = (pts: [number, number][], col: string, band: string, rHead: number, tongue: number) => {
-        c.lineCap = 'round';
-        for (let pass = 0; pass < 2; pass++) {
-          for (let i = pts.length - 2; i >= 0; i--) {
-            const r = lerp(rHead * 0.82, rHead * 0.22, i / (pts.length - 1));
-            c.beginPath(); c.moveTo(...pts[i]); c.lineTo(...pts[i + 1]);
-            c.lineWidth = pass ? r * 2 : r * 2 + 6;
-            c.strokeStyle = pass ? (Math.floor(i / 9) % 2 ? band : col) : 'rgba(10,12,30,0.35)';
-            c.stroke();
-          }
+      // the reorg: 19 back down to 5
+      const setback = slither(wavy(tile(19), tile(5), 24, 1.5), 3, t * 4 + 1);
+      // the last one, lying in wait on 33: the final roll jumps right over its head
+      const lurker = slither(wavy(tile(33), tile(8), 26, 1.5), 3, t * 5);
+      const snake = (spine: P2[], col: string, band: string, R: number, o: { tongue?: number; look?: P2; blink?: number } = {}) => {
+        const n = spine.length, s = [0];
+        for (let i = 1; i < n; i++) s.push(s[i - 1] + Math.hypot(spine[i][0] - spine[i - 1][0], spine[i][1] - spine[i - 1][1]));
+        const len = s[n - 1];
+        const nrm = spine.map((_, i) => { const a = spine[Math.max(0, i - 1)], b = spine[Math.min(n - 1, i + 1)], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [-(b[1] - a[1]) / L, (b[0] - a[0]) / L] as P2; });
+        // slim neck, fullest a quarter of the way down, tapering to a fine point
+        const wid = (i: number) => { const u = s[i] / len; return R * (0.62 + 0.38 * smooth(0, 0.25, u)) * (1 - 0.95 * smooth(0.28, 1, u)); };
+        const edge = (i: number, k: number): P2 => [spine[i][0] + nrm[i][0] * wid(i) * k, spine[i][1] + nrm[i][1] * wid(i) * k];
+        const ribbon = (k0: number, k1: number) => {
+          c.beginPath();
+          for (let i = 0; i < n; i++) c.lineTo(...edge(i, k0));
+          for (let i = n - 1; i >= 0; i--) c.lineTo(...edge(i, k1));
+          c.closePath();
+        };
+        const a = Math.atan2(spine[0][1] - spine[4][1], spine[0][0] - spine[4][0]);
+        const headPath = () => {
+          c.beginPath(); c.moveTo(1.3 * R, 0);
+          c.bezierCurveTo(1.3 * R, 0.6 * R, 0.55 * R, 1.02 * R, -0.1 * R, R);
+          c.bezierCurveTo(-0.65 * R, 0.98 * R, -0.95 * R, 0.55 * R, -0.95 * R, 0);
+          c.bezierCurveTo(-0.95 * R, -0.55 * R, -0.65 * R, -0.98 * R, -0.1 * R, -R);
+          c.bezierCurveTo(0.55 * R, -1.02 * R, 1.3 * R, -0.6 * R, 1.3 * R, 0);
+          c.closePath();
+        };
+        const OUT = 'rgba(27,29,58,0.55)';
+        c.lineJoin = 'round'; c.lineCap = 'round';
+        // soft drop shadow on the board
+        c.save(); c.translate(5, 9); c.fillStyle = 'rgba(10,12,30,0.2)';
+        ribbon(-1, 1); c.fill();
+        c.translate(...spine[0]); c.rotate(a); headPath(); c.fill();
+        c.restore();
+        // the body: one shape, crossbands, a shaded flank and a glossy back
+        ribbon(-1, 1); c.fillStyle = col; c.fill();
+        c.save(); c.clip();
+        c.fillStyle = band;
+        const P = R * 2;
+        for (let d = R * 1.4; d < len - R; d += P) {
+          const i0 = s.findIndex((v) => v >= d), i1 = s.findIndex((v) => v >= d + P * 0.42);
+          if (i0 < 0 || i1 < 0) break;
+          c.beginPath();
+          for (let i = i0; i <= i1; i++) c.lineTo(...edge(i, -1.3));
+          for (let i = i1; i >= i0; i--) c.lineTo(...edge(i, 1.3));
+          c.closePath(); c.fill();
         }
-        const [hx, hy] = pts[0], a = Math.atan2(pts[0][1] - pts[3][1], pts[0][0] - pts[3][0]);
-        c.save(); c.translate(hx, hy); c.rotate(a);
-        if (tongue > 0) { c.strokeStyle = C.red; c.lineWidth = 4; c.beginPath(); c.moveTo(rHead, 0); c.lineTo(rHead + 26 * tongue, 0); c.lineTo(rHead + 34 * tongue, -7); c.moveTo(rHead + 26 * tongue, 0); c.lineTo(rHead + 34 * tongue, 7); c.stroke(); }
-        c.beginPath(); c.ellipse(0, 0, rHead * 1.25, rHead, 0, 0, Math.PI * 2); c.fillStyle = col; c.fill();
-        for (const s of [-1, 1]) {
-          c.beginPath(); c.arc(rHead * 0.35, s * rHead * 0.45, rHead * 0.3, 0, Math.PI * 2); c.fillStyle = '#fff'; c.fill();
-          c.beginPath(); c.arc(rHead * 0.45, s * rHead * 0.45, rHead * 0.15, 0, Math.PI * 2); c.fillStyle = C.ink; c.fill();
+        c.fillStyle = 'rgba(10,12,40,0.16)'; ribbon(-1.1, -0.45); c.fill();
+        c.fillStyle = 'rgba(255,255,255,0.3)'; ribbon(0.2, 0.55); c.fill();
+        c.restore();
+        c.lineWidth = 3; c.strokeStyle = OUT; ribbon(-1, 1); c.stroke();
+        // the head
+        c.save(); c.translate(...spine[0]); c.rotate(a);
+        const tg = o.tongue ?? 0;
+        if (tg > 0) {
+          c.strokeStyle = C.red; c.lineWidth = Math.max(3, R * 0.13);
+          c.beginPath(); c.moveTo(R, 0); c.lineTo(R * 1.3 + 26 * tg, 0); c.lineTo(R * 1.3 + 36 * tg, -8 * tg); c.moveTo(R * 1.3 + 26 * tg, 0); c.lineTo(R * 1.3 + 36 * tg, 8 * tg); c.stroke();
+        }
+        headPath(); c.fillStyle = col; c.fill();
+        c.save(); c.clip();
+        c.fillStyle = band; c.beginPath(); c.ellipse(-0.35 * R, 0, 0.42 * R, 0.3 * R, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = 'rgba(10,12,40,0.16)'; c.beginPath(); c.ellipse(0, -1.05 * R, 1.4 * R, 0.45 * R, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = 'rgba(255,255,255,0.3)'; c.beginPath(); c.ellipse(0.1 * R, 0.42 * R, 0.6 * R, 0.16 * R, 0, 0, Math.PI * 2); c.fill();
+        c.restore();
+        c.lineWidth = 3; c.strokeStyle = OUT; headPath(); c.stroke();
+        c.fillStyle = 'rgba(27,29,58,0.5)';
+        for (const sd of [-1, 1]) { c.beginPath(); c.arc(1.08 * R, sd * 0.2 * R, R * 0.06 + 0.6, 0, Math.PI * 2); c.fill(); }
+        // big eyes, pupils on whatever they're watching
+        let lx = 1, ly = 0;
+        if (o.look) { const wx = o.look[0] - spine[0][0], wy = o.look[1] - spine[0][1], L = Math.hypot(wx, wy) || 1; lx = (wx * Math.cos(a) + wy * Math.sin(a)) / L; ly = (-wx * Math.sin(a) + wy * Math.cos(a)) / L; }
+        const er = 0.36 * R, bl = o.blink ?? 1;
+        for (const sd of [-1, 1]) {
+          const ex = 0.3 * R, ey = sd * 0.6 * R;
+          c.beginPath(); c.ellipse(ex, ey, er, er * bl, 0, 0, Math.PI * 2); c.fillStyle = '#fff'; c.fill();
+          c.lineWidth = 2; c.strokeStyle = OUT; c.stroke();
+          if (bl > 0.5) {
+            const px = ex + lx * er * 0.42, py = ey + ly * er * 0.42;
+            c.beginPath(); c.arc(px, py, er * 0.52, 0, Math.PI * 2); c.fillStyle = C.ink; c.fill();
+            c.beginPath(); c.arc(px - er * 0.18, py - er * 0.2, er * 0.17, 0, Math.PI * 2); c.fillStyle = '#fff'; c.fill();
+          }
         }
         c.restore();
       };
@@ -228,47 +312,62 @@ export const scenes2: Scene[] = [
         for (const s of [-1, 1]) { c.beginPath(); c.moveTo(a[0] + (s * nx * w) / 2, a[1] + (s * ny * w) / 2); c.lineTo(b[0] + (s * nx * w) / 2, b[1] + (s * ny * w) / 2); c.stroke(); }
       };
 
-      // the pawn's route, on the beat: hop, hop, climb, hop ×4, slide, out the door
-      type Leg = { a: number; b: number; pos: (u: number) => [number, number]; hop?: boolean };
+      // the pawn's route, roll by roll on the beat:
+      // 1→3, ladder to 16, 16→19, snake down to 5, 5→11, ladder to 31, 31→35 right over the last snake, Finish… then out the exit
+      type Leg = { a: number; b: number; pos: (u: number) => P2; hop?: number; climb?: boolean };
       const legs: Leg[] = [];
-      const hopLeg = (from: number, to: number, land: number) => legs.push({ a: land - 0.24, b: land, hop: true, pos: (u) => { const p = tile(from), q = tile(to); return [lerp(p[0], q[0], u), lerp(p[1], q[1], u)]; } });
-      hopLeg(1, 2, beat(117.5)); hopLeg(2, 3, beat(118));
-      legs.push({ a: beat(118) + 0.04, b: beat(119), pos: (u) => { const p = tile(3), q = tile(18), e = smooth(0, 1, u); return [lerp(p[0], q[0], e), lerp(p[1], q[1], e)]; } });
-      hopLeg(18, 19, beat(119.5)); hopLeg(19, 20, beat(120)); hopLeg(20, 21, beat(120.5)); hopLeg(21, 22, beat(121));
-      legs.push({ a: beat(121) + 0.06, b: beat(122.3), pos: (u) => big[Math.min(big.length - 1, Math.floor(inCubic(u) * 0.6 * (big.length - 1) + u * 0.4 * (big.length - 1)))] });
-      const out = smooth(beat(122.3), beat(122.7), t);
+      const leap = (p: P2, q: P2, a: number, b: number, h = 34 + 0.16 * Math.hypot(q[0] - p[0], q[1] - p[1])) => legs.push({ a: beat(a), b: beat(b), hop: h, pos: (u) => [lerp(p[0], q[0], u), lerp(p[1], q[1], u)] });
+      const roll = (from: number, to: number, a: number, b: number) => leap(tile(from), tile(to), a, b);
+      const climb = (from: number, to: number, a: number, b: number) => { const p = tile(from), q = tile(to); legs.push({ a: beat(a), b: beat(b), climb: true, pos: (u) => { const e = smooth(0, 1, u); return [lerp(p[0], q[0], e), lerp(p[1], q[1], e)]; } }); };
+      const slide = (sp: P2[], a: number, b: number) => legs.push({ a: beat(a), b: beat(b), pos: (u) => { const f = lerp(inCubic(u), u, 0.4) * (sp.length - 1), k = Math.min(sp.length - 2, Math.floor(f)); return [lerp(sp[k][0], sp[k + 1][0], f - k), lerp(sp[k][1], sp[k + 1][1], f - k)]; } });
+      roll(1, 3, 117.3, 117.75); climb(3, 16, 117.8, 118.55);
+      roll(16, 19, 118.65, 119.1); slide(setback, 119.15, 119.9);
+      roll(5, 11, 120.0, 120.45); climb(11, 31, 120.5, 121.25);
+      roll(31, 35, 121.35, 121.85);
+      leap(tile(35), [door[0], by1 - 14], 122.3, 122.75, 110);
+      const out = smooth(beat(122.75), beat(123.05), t);
+      const won = smooth(beat(121.85), beat(121.95), t) * (1 - smooth(beat(122.0), beat(122.4), t));
       let pos = tile(1), lift = 0, squash = 0;
       for (const L of legs) {
         if (t >= L.b) pos = L.pos(1);
-        else if (t >= L.a) { const u = (t - L.a) / (L.b - L.a); pos = L.pos(u); if (L.hop) lift = Math.sin(u * Math.PI) * 46; break; }
-        else break;
+        else if (t >= L.a) {
+          const u = (t - L.a) / (L.b - L.a); pos = L.pos(u);
+          if (L.hop) lift = Math.sin(u * Math.PI) * L.hop;
+          if (L.climb) lift = Math.abs(Math.sin(u * Math.PI * 4)) * 8; // rung by rung
+          break;
+        } else break;
         if (L.hop && t - L.b < 0.12) squash = 1 - (t - L.b) / 0.12;
       }
-      if (out > 0) pos = [lerp(door[0] - 30, door[0], out), by1 - 14];
+      const flick = (a: number, b: number) => (t > beat(a) && t < beat(b) ? 0.6 + 0.4 * Math.sin(t * 30) : 0);
 
-      at(c, cx - 60, cy + 40, { s: 0.9 + 0.1 * board, a: clamp01(board * 2) }, () => {
-        c.translate(-(cx - 60), -(cy + 40));
+      at(c, BX, BY, { s: 0.9 + 0.1 * board, a: clamp01(board * 2) }, () => {
+        c.translate(-BX, -BY);
         // the board
-        card(c, cx - 60, cy + 40, COLS * TS + 36, ROWS * TS + 36, { r: 24 });
+        card(c, BX, BY, COLS * TS + 36, ROWS * TS + 36, { r: 24 });
         const tints = ['#fffaf3', '#f1ecff', '#fffaf3', '#ffeef5', '#fffaf3', '#e6f9f6', '#fffaf3', '#fff3da'];
         for (let n = 1; n <= COLS * ROWS; n++) {
           const [x, y] = tile(n);
           c.fillStyle = tints[(n + Math.floor((n - 1) / COLS)) % tints.length]; c.fillRect(x - TS / 2 + 2, y - TS / 2 + 2, TS - 4, TS - 4);
           txt(c, String(n), x - TS / 2 + 12, y - TS / 2 + 20, { size: 18, weight: 700, color: 'rgba(27,29,58,0.28)' });
         }
-        ladder(tile(13), tile(26), 30);
-        ladder(tile(3), tile(18));
-        snake(small, C.lavender, '#8f74ee', 20, 0);
-        // the exit: a door off the edge of the board, open while the pawn slides
-        const open = smooth(beat(121.4), beat(121.9), t) * (1 - smooth(beat(122.75), beat(123.05), t));
+        // Finish, with a little burst when the pawn lands on it
+        const [fx, fy] = tile(35);
+        star(c, fx, fy + 2, 28 + 2 * Math.sin(t * 6) + 12 * won);
+        txt(c, 'FINISH', fx, fy + 42, { size: 13, weight: 800, color: '#c9932e', align: 'center', spacing: 2 });
+        ladder(tile(3), tile(16));
+        ladder(tile(11), tile(31));
+        snake(setback, C.lavender, '#8f74ee', 19, { tongue: flick(118.6, 119.15), look: pos, blink: (t + 0.7) % 2.6 < 0.12 ? 0.1 : 1 });
+        snake(lurker, C.green, '#2bb07a', 20, { tongue: flick(121.15, 121.9), look: pos, blink: (t + 1.9) % 3.1 < 0.12 ? 0.1 : 1 });
+        // the exit: a door off the edge of the board, swinging open as the pawn reaches Finish
+        const open = smooth(beat(121.9), beat(122.3), t) * (1 - smooth(beat(123.05), beat(123.35), t));
         const [dx, dy] = door;
-        rr(c, dx - 70, dy - 220, 140, 220, [10, 10, 0, 0]); c.fillStyle = C.green; c.fill();
-        rr(c, dx - 56, dy - 206, 112, 206, [6, 6, 0, 0]); c.fillStyle = open > 0 ? '#ffe3a3' : '#0e2b36'; c.fill();
-        c.fillStyle = '#0e2b36';
+        // red, like a real exit sign
+        rr(c, dx - 70, dy - 220, 140, 220, [10, 10, 0, 0]); c.fillStyle = C.red; c.fill();
+        rr(c, dx - 56, dy - 206, 112, 206, [6, 6, 0, 0]); c.fillStyle = open > 0 ? '#ffe3a3' : '#241a3c'; c.fill();
+        c.fillStyle = '#241a3c';
         c.beginPath(); c.moveTo(dx - 56, dy - 206); c.lineTo(dx - 56 + 112 * (1 - open * 0.8), dy - 206 + 18 * open); c.lineTo(dx - 56 + 112 * (1 - open * 0.8), dy - 18 * open); c.lineTo(dx - 56, dy); c.closePath(); c.fill();
-        rr(c, dx - 36, dy - 262, 72, 30, 6); c.fillStyle = C.green; c.fill();
+        rr(c, dx - 36, dy - 262, 72, 30, 6); c.fillStyle = C.red; c.fill();
         txt(c, 'EXIT', dx, dy - 247, { size: 18, weight: 800, color: '#fff', align: 'center', spacing: 2 });
-        snake(big, C.green, '#2bb07a', 30, t > beat(120.7) && t < beat(122.3) ? 0.6 + 0.4 * Math.sin(t * 30) : 0);
         // the pawn, with its shadow on the board
         if (out < 1) {
           const [px, py] = pos, s = 1 - out * 0.4;
@@ -367,17 +466,17 @@ export const scenes2: Scene[] = [
     draw: ({ c, t }) => {
       const s = pop(t, 70.35, 0.5);
       at(c, cx, cy, { s: 0.92 + 0.08 * s, a: clamp01(s * 2) }, () => {
-        const w = appWindow(c, 0, 0, 1160, 680, 'Mail · Settings · Automatic reply');
+        const w = appWindow(c, 0, 0, 1160, 550, 'Mail · Settings · Automatic reply');
         txt(c, 'Automatic reply', w.x + 60, w.y + 70, { size: 40, weight: 800 });
         // toggle
         rr(c, w.x + w.w - 190, w.y + 48, 120, 52, 26); c.fillStyle = smooth(70.9, 71.1, t) > 0.5 ? C.green : '#d8d2c6'; c.fill();
         c.beginPath(); c.arc(w.x + w.w - 190 + 26 + 68 * smooth(70.9, 71.1, t), w.y + 74, 20, 0, Math.PI * 2); c.fillStyle = '#fff'; c.fill();
-        rr(c, w.x + 60, w.y + 130, w.w - 120, 330, 14); c.fillStyle = '#f3eee6'; c.fill();
-        const lines = ['Hi!', 'I no longer work here.', 'For urgent matters, please', 'contact an agent.', '— the person who used to sit here'];
+        rr(c, w.x + 60, w.y + 130, w.w - 120, 250, 14); c.fillStyle = '#f3eee6'; c.fill();
+        const lines = ['Hi!', 'I no longer work here.', 'For urgent matters, please contact an agent.', '— the person who used to sit here'];
         let used = 0;
         lines.forEach((ln, i) => {
           const sh = typed(ln, t, 71.4 + used / 24, 24); used += ln.length + 4;
-          txt(c, sh + (sh.length < ln.length && sh.length > 0 && blink(t) ? '▍' : ''), w.x + 100, w.y + 170 + i * 56, { size: 34, weight: i === 4 ? 400 : 500, color: i === 4 ? C.inkSoft : C.ink, max: w.w - 200 });
+          txt(c, sh + (sh.length < ln.length && sh.length > 0 && blink(t) ? '▍' : ''), w.x + 100, w.y + 170 + i * 56, { size: 34, weight: i === 3 ? 400 : 500, color: i === 3 ? C.inkSoft : C.ink, max: w.w - 200 });
         });
         const n = Math.floor(1204 * smooth(73.5, 75.5, t));
         pill(c, w.x + 60, w.y + w.h - 60, `Sent to ${fmt(n)} people`, { size: 24, bg: '#efe9ff', fg: C.lavender });
@@ -422,7 +521,7 @@ export const scenes2: Scene[] = [
       c.restore();
       // ...and what comes out: one
       const o = pop(t, 80.1, 0.45);
-      at(c, cx, floorY - 120, { s: o, a: clamp01(o * 2) }, () => { card(c, 0, 0, 560, 130); txt(c, 'MANAGEMENT', -230, -26, { size: 22, weight: 800, color: C.lavender, spacing: 4 }); txt(c, '1 manager', -230, 22, { size: 48, weight: 800 }); heart(c, 210, 0, 24, C.pink); });
+      at(c, cx, floorY - 120, { s: o, a: clamp01(o * 2) }, () => { infoCard(c, { minW: 560, iconRight: true, gap: 60, icon: { w: 48, h: 44, draw: (g) => heart(g, 0, 0, 24, C.pink) }, lines: [{ text: 'MANAGEMENT', size: 22, weight: 800, color: C.lavender, spacing: 4 }, { text: '1 manager', size: 48, weight: 800, color: C.ink }] }); });
     },
   },
 
@@ -516,7 +615,21 @@ export const scenes2: Scene[] = [
         if (cap) { rr(c, X + 330, Y + 560, 280, 50, 12); c.fillStyle = 'rgba(8,10,30,0.8)'; c.fill(); txt(c, cap, X + 470, Y + 585, { size: 28, weight: 600, color: '#fff', align: 'center', max: 260 }); }
         // the audience
         for (let i = 0; i < 15; i++) { const gx = X + 940 + (i % 3) * 170, gy = Y + 60 + Math.floor(i / 3) * 120, q = pop(t, 86.0 + i * 0.07, 0.3); at(c, gx + 55, gy + 40, { s: q }, () => { rr(c, -70, -50, 140, 100, 12); c.fillStyle = ['#2a2d4a', '#322c52', '#26304a'][i % 3]; c.fill(); person(c, 0, 0, 32, avatarColor(i)); }); }
-        for (let i = 0; i < 7; i++) { const k = t - 88.0 - i * 0.28; if (k < 0) continue; heart(c, X + 760 + Math.sin(k * 3 + i) * 30, Y + 560 - k * 170, 18, i % 2 ? C.pink : C.peach); }
+        // reactions: a mix of hearts, thumbs-ups, claps, sparkles and stars drifting up both sides of the main tile (clear of the CEO), each on its own random path
+        c.save(); rr(c, X + 30, Y + 20, 880, 610, 20); c.clip();
+        const REACTIONS = ['👍', '👏', '❤️', '🎉', '😍', '🙌', '🔥', '💯', '✨', '👍', '👏', '❤️'];
+        for (let i = 0; i < 24; i++) {
+          // spread evenly: each side spawns one every ~0.12 s, and the lane slots are visited in a shuffled order so neighbours never share a spot
+          const side = i % 2 ? 1 : -1, n = i >> 1, k = t - (88.0 + (n / 12) * 1.9 + (rnd(i * 3.3) - 0.5) * 0.08); if (k < 0 || k > 2.6) continue;
+          const emoji = REACTIONS[Math.floor(rnd(i * 7.7) * REACTIONS.length)], size = 34 + rnd(i * 5.1) * 14;
+          const x0 = X + 470 + side * (285 + (((n * 5) % 12) / 11) * 115), sway = 5 + rnd(i * 9.3) * 8, rise = 170 + rnd(i * 2.9) * 30;
+          const px = x0 + Math.sin(k * (2 + rnd(i * 4.4) * 2) + i * 2) * sway, py = Y + 585 - k * rise;
+          const a = smooth(0, 0.25, k) * (1 - smooth(1.8, 2.6, k)), pop0 = 0.6 + 0.4 * outBack(clamp01(k / 0.3));
+          c.save(); c.globalAlpha = a; c.translate(px, py); c.rotate(Math.sin(k * 3 + i) * 0.3); c.scale(pop0, pop0);
+          c.font = `${size}px ${EMOJI_FONTS}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(emoji, 0, 0);
+          c.restore();
+        }
+        c.restore();
       });
     },
   },
@@ -536,7 +649,7 @@ export const scenes2: Scene[] = [
       if (glitch > 0.05) { tile(-16 * glitch, 0, 0.5, null); tile(16 * glitch, 0, 0.5, null); } else tile(0, 0, 1, null);
       // the label
       const q = pop(t, 91.9, 0.4);
-      at(c, cx + 520, cy - 150, { s: q }, () => { card(c, 0, 0, 380, 150); txt(c, 'AVATAR v3.2', -160, -30, { size: 28, weight: 800, color: C.teal, spacing: 3 }); txt(c, 'deployed in spring', -160, 22, { size: 32, weight: 700 }); });
+      at(c, cx + 520, cy - 150, { s: q }, () => { infoCard(c, { minW: 380, lines: [{ text: 'AVATAR v3.2', size: 28, weight: 800, color: C.teal, spacing: 3 }, { text: 'deployed in spring', size: 32, weight: 700, color: C.ink }] }); });
       // spring arrives
       const months = ['MAR', 'APR', 'MAY'];
       months.forEach((m, i) => { const on = t > 92.6 + i * 0.35; at(c, cx - 560, cy - 140 + i * 110, { s: pop(t, 92.6 + i * 0.35, 0.3) }, () => { card(c, 0, 0, 210, 84, { fill: on && i === 1 ? C.green : C.card, r: 16, shadow: 18 }); txt(c, m, 0, 0, { size: 34, weight: 800, color: i === 1 ? '#fff' : C.inkSoft, align: 'center' }); }); });

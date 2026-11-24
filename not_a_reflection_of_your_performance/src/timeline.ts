@@ -105,6 +105,30 @@ export const HEADCOUNT_SPECIES: [number, number][] = [
   [YOU_OUT, SPECIES], [172, SPECIES], [190, 7_400_000_000], [204.6, 6_100_000_000], [205.8, 4_200_000_000],
   [208.2, 3_900_000_000], [208.4, 1_600_000_000], [LIGHTS_OUT_5, 1], [LAST_LIGHT, 1], [LAST_LIGHT + 0.05, 0],
 ];
+/**
+ * Agents come online faster than humans go, and not evenly: every human who goes is replaced by a different number of
+ * agents, drawn from a heavy-tailed (log-normal) distribution, so a few are replaced by a swarm and most by a handful.
+ * The mean grows from 1 to AGENTS_PER_HUMAN_END by the time the last light goes out, so the curve bends upward.
+ * Eight billion draws per frame would be absurd, so a fixed, seeded sample of AGENT_SAMPLES draws stands in for the
+ * humans in the order they go; prefix sums make the counter O(1) per frame, and it is a pure function of the input,
+ * so live playback and export agree.
+ */
+export const AGENTS_PER_HUMAN_END = 40;
+const AGENT_SAMPLES = 4000, AGENT_SIGMA = 1.1;
+const AGENT_PREFIX: number[] = (() => {
+  let seed = 0x9e3779b9;
+  const rand = () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const prefix = [0];
+  for (let i = 0; i < AGENT_SAMPLES; i++) {
+    const z = Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand()); // standard normal (Box-Muller)
+    prefix.push(prefix[i] + Math.exp(-AGENT_SIGMA * AGENT_SIGMA / 2 + AGENT_SIGMA * z)); // log-normal with mean 1
+  }
+  return prefix;
+})();
+export const agentsOnline = (gone: number, total: number) => {
+  const p = Math.min(1, gone / total), k = Math.max(50, Math.ceil(p * AGENT_SAMPLES));
+  return gone * (1 + (AGENTS_PER_HUMAN_END - 1) * p) * (AGENT_PREFIX[k] / k);
+};
 export const SCOPE_SWITCH = 153.9; // "As part of a broader restructuring": the ticker zooms out to the species
 
 // ── interface moments

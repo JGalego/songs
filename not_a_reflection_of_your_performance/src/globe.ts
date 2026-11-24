@@ -64,8 +64,8 @@ export class Globe {
       light.push(l);
       // 5 PM arrives in the east first: the switch-off order runs from the date line westward, with some scatter
       key.push(Math.min(0.999, ((Math.PI - lon) / (2 * Math.PI)) * 0.82 + h * 0.18));
-      // about one light in six (a few more of the bright ones) are taken over by agents; the value is when
-      agent.push(l > 0.08 && hash(i + 7) < 0.12 + 0.14 * l ? hash(i + 3) : -1);
+      // most lights are taken over by an agent the moment 5 PM reaches them: agents outgrow the people they replace
+      agent.push(l > 0.08 && hash(i + 7) < 0.6 + 0.3 * l ? hash(i + 3) : -1);
       last.push(0);
       if (Math.abs(lat) < 0.06 && l > bestLight) { bestLight = l; best = light.length - 1; }
     }
@@ -80,26 +80,43 @@ export class Globe {
     geo.setAttribute('aAgent', new THREE.Float32BufferAttribute(agent, 1));
     geo.setAttribute('aLast', new THREE.Float32BufferAttribute(last, 1));
 
-    // the night side of the planet: an opaque dark sphere, so the far side (and the sun behind it) is hidden
+    // the night side of the planet: an opaque dark sphere, so the far side (and the sun behind it) is hidden.
+    // It has a bright thin limb, a soft sheen from the upper left, and a glowing "5 PM" line that sweeps from the date
+    // line westward, in step with the lights going out.
     const ocean = new THREE.Mesh(
       new THREE.SphereGeometry(R * 0.995, 96, 48),
       new THREE.ShaderMaterial({
-        uniforms: { uOpacity: this.uniforms.uOpacity },
+        uniforms: { uOpacity: this.uniforms.uOpacity, uOff: this.uniforms.uOff },
         transparent: true,
         vertexShader: /* glsl */ `
           varying float vRim;
+          varying vec3 vObj, vNv;
           void main() {
             vec4 mv = modelViewMatrix * vec4(position, 1.0);
-            vRim = 1.0 - abs(dot(normalize(normalMatrix * normal), normalize(-mv.xyz)));
+            vNv = normalize(normalMatrix * normal);
+            vRim = 1.0 - abs(dot(vNv, normalize(-mv.xyz)));
+            vObj = position;
             gl_Position = projectionMatrix * mv;
           }
         `,
         fragmentShader: /* glsl */ `
-          uniform float uOpacity;
+          uniform float uOpacity, uOff;
           varying float vRim;
+          varying vec3 vObj, vNv;
           void main() {
-            // linear colours (the output pass converts to sRGB): about #070b1d, lifting to #121838 at the limb
-            vec3 col = mix(vec3(0.0021, 0.0033, 0.0123), vec3(0.006, 0.009, 0.04), pow(vRim, 3.0));
+            // linear colours (the output pass converts to sRGB)
+            vec3 col = mix(vec3(0.0030, 0.0045, 0.0160), vec3(0.008, 0.012, 0.05), pow(vRim, 3.0));
+            float sheen = pow(max(0.0, dot(vNv, normalize(vec3(-0.45, 0.55, 0.7)))), 2.5);
+            col += vec3(0.004, 0.009, 0.030) * sheen;
+            col += vec3(0.05, 0.10, 0.36) * pow(vRim, 5.0) * 0.9; // a crisp bright edge
+            // where it is 5 PM right now: the same longitude the lights are going out at
+            float lon = atan(vObj.x, vObj.z), lat = vObj.y / length(vObj);
+            float edge = 3.14159265 - (uOff / 0.82) * 6.2831853;
+            float dl = mod(lon - edge + 3.14159265, 6.2831853) - 3.14159265;
+            float on = smoothstep(0.003, 0.02, uOff) * (1.0 - smoothstep(0.78, 0.84, uOff));
+            float line = exp(-dl * dl * 90.0) * (1.0 - 0.6 * lat * lat);
+            float dusk = smoothstep(0.0, 0.5, dl) * (1.0 - smoothstep(0.5, 1.4, dl)) * 0.25; // a soft glow behind it, on the side already gone dark
+            col += vec3(1.0, 0.42, 0.16) * (line * 0.05 + dusk * 0.008) * on;
             gl_FragColor = vec4(col, uOpacity);
           }
         `,
@@ -124,16 +141,16 @@ export class Globe {
           // a human light is on until 5 PM reaches it; the last one obeys uLast only
           float human = aLight * (aLast > 0.5 ? uLast : smoothstep(uOff - 0.004, uOff + 0.004, aKey));
           // an agent light comes on (with a flash) and never goes out
-          float ag = aAgent < 0.0 ? 0.0 : smoothstep(aAgent, aAgent + 0.02, uAgents);
-          float flash = aAgent < 0.0 ? 0.0 : (1.0 - smoothstep(0.0, 0.08, uAgents - aAgent)) * ag;
+          float ag = aAgent < 0.0 ? 0.0 : smoothstep(aKey - 0.004, aKey + 0.004, uOff);
+          float flash = aAgent < 0.0 ? 0.0 : (1.0 - smoothstep(0.0, 0.05, uOff - aKey)) * ag;
           human *= 1.0 - ag;
           vec3 land = vec3(0.16, 0.2, 0.42);
           vec3 warm = mix(vec3(1.0, 0.5, 0.18), vec3(1.0, 0.78, 0.5), aLight);
           warm = mix(warm, vec3(1.0, 0.6, 0.78), aLast);
           vec3 teal = vec3(0.37, 0.88, 0.84);
-          vCol = land * 0.16 + warm * human * 1.1 + teal * ag * (0.85 + flash * 2.0);
+          vCol = land * 0.16 + warm * human * 1.1 + teal * ag * (1.15 + flash * 2.2);
           vA = limb;
-          float size = 1.5 + human * (1.6 + aLight * 2.6 + uPulse * 1.2) + ag * (2.4 + flash * 5.0) + aLast * 7.0 * uLast;
+          float size = 1.5 + human * (1.6 + aLight * 2.6 + uPulse * 1.2) + ag * (0.5 + 0.8 * aAgent * aAgent * aAgent + 0.6 * aAgent) * (1.6 + flash * 3.0) + aLast * 7.0 * uLast;
           gl_PointSize = size * uScale * (24.0 / -mv.z);
           gl_Position = projectionMatrix * mv;
         }
@@ -153,34 +170,38 @@ export class Globe {
     points.frustumCulled = false;
     points.renderOrder = 1;
 
-    // the atmosphere: a thin blue rim that flares orange on the side the sun is setting behind
-    const rim = new THREE.Mesh(new THREE.SphereGeometry(R * 1.025, 96, 48), new THREE.ShaderMaterial({
-      uniforms: { uOpacity: this.uniforms.uOpacity, uOff: this.uniforms.uOff, uSunDir: this.uniforms.uSunDir, uSunAmt: this.uniforms.uSunAmt },
+    // the atmosphere: a halo that falls off smoothly with distance from the limb (measured along each view ray, so it has no
+    // hard inner edge), with a thin bright line right at the limb; it flares orange on the side the sun is setting behind
+    const RA = R * 1.2;
+    const rim = new THREE.Mesh(new THREE.SphereGeometry(RA, 96, 48), new THREE.ShaderMaterial({
+      uniforms: { uOpacity: this.uniforms.uOpacity, uOff: this.uniforms.uOff, uSunDir: this.uniforms.uSunDir, uSunAmt: this.uniforms.uSunAmt, uR: { value: R }, uRa: { value: RA } },
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       side: THREE.BackSide,
       vertexShader: /* glsl */ `
-        varying vec3 vN;
-        varying vec3 vV;
+        varying vec3 vP, vC;
         void main() {
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          vN = normalize(normalMatrix * normal);
-          vV = normalize(-mv.xyz);
+          vP = mv.xyz;
+          vC = (modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
           gl_Position = projectionMatrix * mv;
         }
       `,
       fragmentShader: /* glsl */ `
-        uniform float uOpacity, uOff, uSunAmt;
+        uniform float uOpacity, uOff, uSunAmt, uR, uRa;
         uniform vec2 uSunDir;
-        varying vec3 vN;
-        varying vec3 vV;
+        varying vec3 vP, vC;
         void main() {
-          float edge = 1.0 - abs(dot(vN, vV));
-          float f = pow(edge, 6.0);
-          vec3 col = mix(vec3(0.3, 0.45, 1.0), vec3(0.22, 0.25, 0.55), uOff) * f * 0.6;
-          float toward = max(0.0, dot(normalize(vN.xy + 1e-5), uSunDir)); // back faces: xy points out from the center
-          col += vec3(1.0, 0.55, 0.22) * pow(edge, 2.2) * pow(toward, 6.0) * uSunAmt * 2.2;
+          vec3 d = normalize(vP);
+          vec3 closest = d * dot(vC, d) - vC;   // from the planet's centre to the nearest point on this view ray
+          float b = length(closest);
+          if (b < uR) discard;
+          float h = clamp((b - uR) / (uRa - uR), 0.0, 1.0);
+          float body = pow(1.0 - h, 3.5) * 0.5 + exp(-h * 28.0) * 0.5;
+          vec3 col = mix(vec3(0.28, 0.45, 1.0), vec3(0.2, 0.24, 0.55), uOff) * body * 0.55;
+          float toward = max(0.0, dot(normalize(closest.xy + 1e-5), uSunDir));
+          col += vec3(1.0, 0.55, 0.22) * pow(1.0 - h, 2.2) * pow(toward, 6.0) * uSunAmt * 1.6;
           gl_FragColor = vec4(col * uOpacity, 1.0);
         }
       `,

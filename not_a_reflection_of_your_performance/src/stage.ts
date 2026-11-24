@@ -5,13 +5,16 @@ import { H, W, type Scene } from './scene';
 import { WORD_TIMES } from './karaoke';
 import { CanvasTex, SANS, karaokeAt, karaokeLines, karaokeText } from './text';
 import {
-  CREDITS, CREDITS_START, DURATION, HEADCOUNT_ORG, HEADCOUNT_SPECIES, LYRICS, OFFICE, SCOPE_SWITCH, SPECIES,
+  CREDITS, CREDITS_START, agentsOnline, DURATION, HEADCOUNT_ORG, HEADCOUNT_SPECIES, LYRICS, OFFICE, SCOPE_SWITCH, SPECIES,
 } from './timeline';
 
 const WIPE = [C.pink, C.teal, C.lavender, C.sun];
 const WIPE_LEN = 0.22; // seconds, centered on the cut
 
 const KARAOKE = karaokeLines(WORD_TIMES);
+/** Sung lines that come in after a long wait get a karaoke countdown (three dots, one per beat). Add a time to enable one. */
+const WAIT_CUES: number[] = [WORD_TIMES[0][0][0]];
+const WAIT_BEAT = 60 / 110.98;
 
 /**
  * The 2D stage: one full-screen canvas on top of the 3D world. It plays the scenes in order, wipes between them
@@ -83,6 +86,7 @@ export class Stage {
 
   private drawSubtitle(c: CanvasRenderingContext2D, t: number) {
     if (!this.subtitles) return;
+    this.drawWaitCue(c, t);
     // karaoke: the line shows dim just before it's sung, and each word fills in while it's being sung
     const { i, alpha } = karaokeAt(KARAOKE, t);
     if (i < 0) return;
@@ -94,6 +98,24 @@ export class Stage {
     c.shadowColor = 'rgba(0,0,0,0.85)'; c.shadowBlur = 16;
     karaokeText(c, LYRICS[i].text, WORD_TIMES[i], t, W / 2, H - 82, W - 200, 'rgba(255,244,230,0.42)', C.sun);
     c.restore();
+  }
+
+  /** Three dots fill in left to right, one per beat, then pulse until the line shows up and takes their place. */
+  private drawWaitCue(c: CanvasRenderingContext2D, t: number) {
+    for (const T of WAIT_CUES) {
+      const start = T - 4 * WAIT_BEAT, end = T - 0.35; // the dim line appears 0.35 s before its first word
+      const a = smooth(start - 0.3, start, t) * (1 - smooth(end - 0.15, end, t));
+      if (a <= 0) continue;
+      const pulse = t > T - WAIT_BEAT ? 1 + 0.18 * Math.sin(((t - (T - WAIT_BEAT)) / WAIT_BEAT) * Math.PI * 2) : 1;
+      c.save(); c.globalAlpha = a; c.shadowColor = 'rgba(0,0,0,0.85)'; c.shadowBlur = 14;
+      for (let k = 0; k < 3; k++) {
+        const x = W / 2 + (k - 1) * 46, y = H - 82, r = 11 * pulse, fill = clamp01((t - (T - (4 - k) * WAIT_BEAT)) / WAIT_BEAT);
+        c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = 'rgba(255,244,230,0.38)'; c.fill();
+        c.save(); c.beginPath(); c.rect(x - r, y - r, 2 * r * fill, 2 * r); c.clip();
+        c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = C.sun; c.fill(); c.restore();
+      }
+      c.restore();
+    }
   }
 
   // ── headcount: the company, then the species
@@ -112,7 +134,9 @@ export class Stage {
       shown = fmt(SPECIES).replace(/\d/g, (d, i) => (rnd(tick + i * 7) > 0.4 ? String(Math.floor(rnd(tick * 3 + i) * 10)) : d));
     }
     const frac = value / max, low = frac < 0.35;
-    const x = W - 40 - 520, y = 28, w = 520, h = 150;
+    // once the lights start going out, a second counter shows the agents coming online to replace us
+    const ag = species ? smooth(172.3, 173.0, t) : 0;
+    const x = W - 40 - 520, y = 28, w = 520, h = 150 + 130 * ag;
     c.save();
     c.globalAlpha = a;
     rr(c, x, y, w, h, 20); c.fillStyle = 'rgba(8,10,30,0.74)'; c.fill();
@@ -124,6 +148,15 @@ export class Stage {
     c.fillStyle = 'rgba(255,244,230,0.14)'; c.fillRect(bx, by, bw, 8);
     c.fillStyle = low ? C.red : C.teal;
     for (let i = 0, on = Math.ceil(clamp01(frac) * segs); i < on; i++) c.fillRect(bx + i * (bw / segs), by, bw / segs - 3, 8);
+    if (ag > 0) {
+      c.globalAlpha = a * ag;
+      // agents grow faster than humans shrink (see agentsOnline)
+      const ay = y + 150, gone = Math.max(0, SPECIES - value), online = agentsOnline(gone, SPECIES);
+      c.fillStyle = 'rgba(255,244,230,0.12)'; c.fillRect(L, ay - 8, R - L, 2);
+      pill(c, L, ay + 34, 'AGENTS', { size: 16, bg: C.teal, fg: C.tealDeep });
+      txt(c, 'ONLINE', R, ay + 34, { size: 21, weight: 700, color: 'rgba(255,244,230,0.7)', align: 'right', spacing: 4 });
+      mono(c, fmt(online), R, ay + 90, { size: 58, weight: 700, color: C.teal, align: 'right', max: R - L });
+    }
     c.restore();
   }
 }

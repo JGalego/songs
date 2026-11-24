@@ -1,8 +1,10 @@
 import {
-  agent, appWindow, at, avatar, avatarColor, bin, card, check, clamp01, clockFace, confetti, cross, fmt, heart, lerp, mono, outBack,
+  agent, appWindow, at, avatar, avatarColor, bin, card, check, clamp01, clockFace, confetti, cross, fmt, chatIcon, goldSeal, heart, infoCard, type ChatIcon, lerp, mono, outBack, parcelPlanet,
   outCubic, person, pill, plant, pointer, pop, ramp, rnd, rr, smooth, star, stamp, sunset, tooth, txt, typed, wobble,
 } from './art';
+import { mockImage, MOCK_KINDS } from './mockimg';
 import { C } from './palette';
+import { SANS } from './text';
 import { H, W, type Scene } from './scene';
 import { drawCredits } from './stage';
 import { CREDITS_START, EMAIL, LAPTOP, MOTION } from './timeline';
@@ -10,6 +12,15 @@ import { CREDITS_START, EMAIL, LAPTOP, MOTION } from './timeline';
 const cx = W / 2, cy = 510;
 const BEAT = 60 / 110.98;
 const DARK: [string, string] = ['#000', '#000'];
+
+const SERIF = 'Georgia, "Times New Roman", serif';
+const SANS_SYMBOLS = '"Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", sans-serif';
+const NOTES = ['♪', '♫', '♬', '♩'];
+const BOOK = 'It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters. ';
+const BOOK_X: number[] = [];
+let BOOK_W = 0;
+
+const GOOD = { bg: '#d8f5e8', fg: '#1f8a5b' };
 
 export const scenes3: Scene[] = [
   // ── 1:47 chorus 2 — "not a reflection of your performance": the graph
@@ -39,18 +50,36 @@ export const scenes3: Scene[] = [
   {
     name: 'kudos', t0: 111.7, t1: 115.6, bg: ['#26122e', '#3a1850'], glow: [C.pink, C.sun, C.peach],
     draw: ({ c, t }) => {
-      ['Wonderful', 'Team player', 'Above & beyond', 'MVP', 'Culture champ'].forEach((label, i) => {
+      const kudos: [string, string, ChatIcon, string, string][] = [
+        ['Wonderful', 'Dana', 'sparkle', '#e0a800', '#fff1cf'], ['Team player', 'Ravi', 'team', '#4a7fd6', '#e3efff'], ['Above & beyond', 'Sam', 'rocket', '#e0457f', '#ffe3f0'],
+        ['MVP', 'Lee', 'trophy', '#e08a3c', '#ffeadb'], ['Culture champ', 'Priya', 'crown', '#8b6cf0', '#ece6ff'],
+      ];
+      kudos.forEach(([label, from, icon, ink, tint], i) => {
         const x = 330 + i * 315, q = pop(t, 111.8 + i * BEAT, 0.4);
         at(c, x, cy - 70, { s: q, rot: (i - 2) * 0.05 }, () => {
           card(c, 0, 0, 270, 360, { r: 22 });
-          star(c, 0, -90, 64, 1);
-          txt(c, label, 0, 40, { size: 32, weight: 800, align: 'center', max: 230 });
-          txt(c, `from ${['Dana', 'Ravi', 'Sam', 'Lee', 'Priya'][i]}`, 0, 90, { size: 22, weight: 500, color: C.inkSoft, align: 'center' });
-          heart(c, 0, 150, 26, C.pink);
+          // icon, title and "♥ from …" stacked, centred as one block both ways
+          const R = 62, TS = 34, FS = 24, G1 = 26, G2 = 18, capT = TS * 0.72, capF = FS * 0.72;
+          const H = 2 * R + G1 + capT + G2 + capF;
+          let y = -H / 2;
+          chatIcon(c, icon, 0, y + R, R, ink, tint); y += 2 * R + G1;
+          c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+          c.font = `800 ${TS}px ${SANS}`; let ts = TS; const lw = c.measureText(label).width; if (lw > 230) { ts = Math.floor((TS * 230) / lw); c.font = `800 ${ts}px ${SANS}`; }
+          c.fillStyle = C.ink; c.fillText(label, 0, y + capT); y += capT + G2;
+          c.font = `500 ${FS}px ${SANS}`; const fw = c.measureText(`from ${from}`).width, heartW = 24, left = -(heartW + 8 + fw) / 2;
+          heart(c, left + heartW / 2, y + capF / 2 + 1, 11, C.pink);
+          c.textAlign = 'left'; c.fillStyle = C.inkSoft; c.fillText(`from ${from}`, left + heartW + 8, y + capF);
         });
       });
       const q = pop(t, 114.3, 0.4);
-      at(c, cx, cy + 290, { s: q, a: clamp01(q * 2) }, () => { card(c, 0, 0, 1000, 130, { fill: '#2a0f1c', stroke: C.red }); txt(c, 'Recognition budget', -440, -16, { size: 28, weight: 600, color: 'rgba(255,244,230,0.8)' }); mono(c, '$0.00 remaining', 440, 0, { size: 52, weight: 700, color: C.red, align: 'right' }); });
+      at(c, cx, cy + 290, { s: q, a: clamp01(q * 2) }, () => {
+        infoCard(c, { minW: 1000, minH: 150, r: 26, gap: 44, align: 'center', fill: '#2a0f1c', stroke: C.red, lineGap: 18,
+          icon: { w: 76, h: 76, draw: (g) => { g.lineWidth = 7; g.strokeStyle = C.red; g.beginPath(); g.arc(0, 0, 34, 0, Math.PI * 2); g.stroke(); g.lineWidth = 4; g.beginPath(); g.arc(0, 0, 21, 0, Math.PI * 2); g.stroke(); g.lineWidth = 7; g.beginPath(); g.moveTo(-26, 26); g.lineTo(26, -26); g.stroke(); } },
+          lines: [
+            { text: 'RECOGNITION BUDGET', size: 24, weight: 800, color: 'rgba(255,244,230,0.78)', spacing: 5 },
+            { text: '$0.00 remaining', size: 62, weight: 700, color: C.red, mono: true },
+          ] });
+      });
       confetti(c, t, 111.9, 40, 100, 1820, 130, 500, 11);
     },
   },
@@ -62,30 +91,34 @@ export const scenes3: Scene[] = [
       const s = pop(t, 115.7, 0.5);
       at(c, cx, cy + 50, { s: 0.92 + 0.08 * s, a: clamp01(s * 2) }, () => {
         card(c, 0, 0, 1500, 700);
-        txt(c, 'TOTAL COMPENSATION CALCULATOR', -690, -310, { size: 24, weight: 800, color: C.lavender, spacing: 5 });
+        // header row: title left, the savings badge right, on one line
+        txt(c, 'TOTAL COMPENSATION CALCULATOR', -690, -295, { size: 24, weight: 800, color: C.lavender, spacing: 5 });
+        const sv = pop(t, 118.4, 0.4);
+        at(c, 690 - 140, -295, { s: sv }, () => { pill(c, 0, 0, 'You save 99.9998%', { size: 30, bg: C.green, fg: '#fff', align: 'center' }); });
+        c.fillStyle = '#e9e3d9'; c.fillRect(-690, -255, 1380, 2);
+        // two mirrored columns: name, total, then the bar
+        const HX = -345, AX = 345, AGENT_INK = '#14a89c', base = 280, scale = 1.2, BAR = 240;
+        txt(c, 'HUMAN', HX, -218, { size: 24, weight: 800, align: 'center', spacing: 5, color: C.inkSoft });
+        txt(c, 'AGENT', AX, -218, { size: 24, weight: 800, align: 'center', spacing: 5, color: AGENT_INK });
+        const tot = Math.round(285 * smooth(116.0, 117.6, t));
+        mono(c, `$${tot}k / yr`, HX, -160, { size: 56, weight: 700, align: 'center', color: C.ink, max: 600 });
+        mono(c, '$0.0004 / task', AX, -160, { size: 56, weight: 700, align: 'center', color: AGENT_INK, max: 600 });
+        // human: a stack of benefits with the labels to its right; bar and labels are centred together in the column
         const parts: [string, number, string][] = [['Salary', 150, C.pink], ['401(k) match', 50, C.peach], ['Health', 40, C.teal], ['Dental', 22, C.lavender], ['Vision', 15, C.sun], ['Free coffee', 8, '#a67c52']];
-        const base = 290, scale = 1.6;
+        const bx = HX - 82, labelX = bx + BAR / 2 + 24;
         let y = base;
         parts.forEach(([name, v, col], i) => {
-          const k = smooth(116.0 + i * 0.25, 116.4 + i * 0.25, t), drop = name === 'Dental' ? smooth(119.5, 119.9, t) : 1;
-          const h = v * scale * k * (name === 'Dental' ? 1 - drop * 0.0 : 1);
-          if (name === 'Dental' && t > 119.6) { at(c, -460 + (t - 119.6) * 0, y - h / 2, {}, () => {}); }
+          const k = smooth(116.0 + i * 0.25, 116.4 + i * 0.25, t), h = v * scale * k;
           y -= h;
-          rr(c, -560, y, 260, h - 3, 6); c.fillStyle = col; c.globalAlpha *= name === 'Dental' && t > 119.6 ? 1 - smooth(119.6, 120.1, t) : 1; c.fill(); c.globalAlpha = 1;
-          if (h > 18) txt(c, name, -280, y + h / 2, { size: 24, weight: 600, color: C.inkSoft, max: 220 });
+          c.globalAlpha = name === 'Dental' && t > 119.6 ? 1 - smooth(119.6, 120.1, t) : 1;
+          rr(c, bx - BAR / 2, y, BAR, Math.max(0, h - 3), 6); c.fillStyle = col; c.fill(); c.globalAlpha = 1;
+          if (h > 16) txt(c, name, labelX, y + h / 2 + (name === 'Vision' ? -6 : 0), { size: 22, weight: 600, color: C.inkSoft, max: 190 });
         });
-        txt(c, 'HUMAN', -430, 335, { size: 26, weight: 800, align: 'center', spacing: 4 });
-        // the agent: a sliver
-        rr(c, 120, base - 6, 260, 6, 3); c.fillStyle = C.teal; c.fill();
-        agent(c, 250, base - 50, 38, t * 0.9);
-        txt(c, 'AGENT', 250, 335, { size: 26, weight: 800, color: C.teal, align: 'center', spacing: 4 });
-        mono(c, '$0.0004 / task', 250, base - 100, { size: 24, color: C.teal, align: 'center' });
-        const tot = Math.round(285 * smooth(116.0, 117.6, t));
-        mono(c, `$${tot}k`, -430, -250, { size: 84, weight: 700, align: 'center', color: C.ink });
-        const sv = pop(t, 118.4, 0.4);
-        at(c, 480, -170, { s: sv }, () => { pill(c, 0, 0, 'You save 99.9998%', { size: 34, bg: C.green, fg: '#fff', align: 'center' }); });
+        // agent: a sliver, with the agent mark standing on it
+        rr(c, AX - BAR / 2, base - 6, BAR, 6, 3); c.fillStyle = C.teal; c.fill();
+        agent(c, AX, base - 52, 38, t * 0.9);
       });
-      if (t > 119.65) at(c, cx - 120, cy - 80, { s: pop(t, 119.65, 0.4) }, () => { tooth(c, 0, 0, 90); cross(c, 0, 0, 200, C.red, 0.12); });
+      if (t > 119.65) at(c, cx + -427, cy + 50 + 280 - 251 * 1.2, { s: pop(t, 119.65, 0.4) }, () => { tooth(c, 0, 0, 70); cross(c, 0, 0, 160, C.red, 0.12); });
     },
   },
 
@@ -191,27 +224,41 @@ export const scenes3: Scene[] = [
       const s = pop(t, 135.7, 0.5);
       at(c, cx, cy + 70, { s: 0.94 + 0.06 * s, a: clamp01(s * 2) }, () => {
         card(c, 0, 0, 1560, 760);
+        // header
         txt(c, 'ACME INC. · INVESTOR UPDATE', -720, -330, { size: 24, weight: 800, color: C.lavender, spacing: 5 });
-        txt(c, 'Q3 highlights', -720, -260, { size: 78, weight: 800 });
-        pill(c, 720, -300, '▲ ACME +8.2%', { size: 28, bg: '#d8f5e8', fg: '#1f8a5b', align: 'right' });
-        type Row = { label: string; on: number; val: string; valOn: number; col: string; spark: number[]; note?: string; noteOn?: number };
+        txt(c, 'Q3 highlights', -720, -268, { size: 68, weight: 800 });
+        pill(c, 720, -268, '▲ ACME +8.2%', { size: 28, bg: GOOD.bg, fg: GOOD.fg, align: 'right' });
+        c.fillStyle = '#e9e3d9'; c.fillRect(-720, -212, 1440, 2);
+        // one grid for every row: metric | status | trend | note
+        const COL = { metric: -720, status: -330, trend: 90, note: 720 }, TREND_W = 270, ROW = 120, Y0 = -100;
+        (['METRIC', 'STATUS', 'TREND'] as const).forEach((h, i) => txt(c, h, [COL.metric, COL.status, COL.trend][i], -188, { size: 17, weight: 800, color: C.inkSoft, spacing: 4, alpha: 0.7 }));
+        txt(c, 'NOTE', COL.note, -188, { size: 17, weight: 800, color: C.inkSoft, spacing: 4, align: 'right', alpha: 0.7 });
+        type Row = { label: string; on: number; val: string; valOn: number; col: string; spark: number[]; note: string; noteOn: number; muted?: boolean };
         const rows: Row[] = [
-          { label: 'Revenue', on: 137.75, val: '▲ Up', valOn: 138.71, col: C.green, spark: [0.2, 0.25, 0.3, 0.38, 0.5, 0.62, 0.8, 0.95] },
-          { label: 'Headcount', on: 139.75, val: '▼ Down', valOn: 140.79, col: C.red, spark: [0.95, 0.9, 0.8, 0.62, 0.4, 0.2, 0.06, 0.0] },
+          { label: 'Revenue', on: 137.75, val: '▲ Up', valOn: 138.71, col: C.green, spark: [0.2, 0.25, 0.3, 0.38, 0.5, 0.62, 0.8, 0.95], note: 'record quarter', noteOn: 139.7 },
+          { label: 'Headcount', on: 139.75, val: '▼ Down', valOn: 140.79, col: C.red, spark: [0.95, 0.9, 0.8, 0.62, 0.4, 0.2, 0.06, 0.0], note: 'as planned', noteOn: 141.7 },
           { label: 'p(doom)', on: 141.84, val: '▲ +12%', valOn: 141.84, col: C.green, spark: [0.1, 0.14, 0.2, 0.28, 0.4, 0.52, 0.7, 0.88], note: 'ahead of guidance', noteOn: 143.6 },
-          { label: 'UBI', on: 145.92, val: 'On the roadmap', valOn: 145.92, col: C.inkSoft, spark: [], note: 'not scoped', noteOn: 148.69 },
+          { label: 'UBI', on: 145.92, val: '→ On the roadmap', valOn: 145.92, col: C.inkSoft, spark: [], note: 'not scoped', noteOn: 148.69, muted: true },
         ];
         rows.forEach((r, i) => {
           if (t < r.on) return;
-          const y = -140 + i * 130, k = outCubic((t - r.on) / 0.4);
-          c.globalAlpha = k; c.fillStyle = '#e9e3d9'; c.fillRect(-720, y - 66, 1440, 2);
-          txt(c, r.label, -720, y, { size: 52, weight: 700 });
-          if (t >= r.valOn) txt(c, r.val, -330, y, { size: 52, weight: 800, color: r.col, max: 420 });
-          if (r.spark.length && t >= r.valOn) {
-            const g = ramp(t, r.valOn, r.valOn + 0.8); c.strokeStyle = r.col; c.lineWidth = 7; c.lineJoin = 'round'; c.beginPath();
-            r.spark.forEach((v, j) => { if (j / (r.spark.length - 1) > g) return; const px = 60 + (j / (r.spark.length - 1)) * 300, py = y + 36 - v * 72; j ? c.lineTo(px, py) : c.moveTo(px, py); }); c.stroke();
+          const y = Y0 + i * ROW, k = outCubic((t - r.on) / 0.4);
+          c.globalAlpha = k;
+          if (i) { c.fillStyle = '#efe9df'; c.fillRect(-720, y - ROW / 2, 1440, 2); }
+          txt(c, r.label, COL.metric, y + 4, { size: 46, weight: 700, max: 330 });
+          if (t >= r.valOn) txt(c, r.val, COL.status, y + 4, { size: 46, weight: 800, color: r.col, max: 370 });
+          if (t >= r.valOn) {
+            const n = r.spark.length, g = ramp(t, r.valOn, r.valOn + 0.8), pt = (j: number) => [COL.trend + (j / (n - 1)) * TREND_W, y + 30 - r.spark[j] * 60];
+            c.lineWidth = 6; c.lineJoin = 'round'; c.lineCap = 'round'; c.strokeStyle = r.col;
+            if (n) {
+              c.beginPath(); let last = 0;
+              r.spark.forEach((_, j) => { if (j / (n - 1) > g) return; const [px, py] = pt(j); j ? c.lineTo(px, py) : c.moveTo(px, py); last = j; }); c.stroke();
+              if (g >= 1) { const [px, py] = pt(last); c.beginPath(); c.arc(px, py, 9, 0, Math.PI * 2); c.fillStyle = r.col; c.fill(); }
+            } else { // nothing to plot: a dashed flatline
+              c.setLineDash([4, 16]); c.strokeStyle = '#c9c3b8'; c.beginPath(); c.moveTo(COL.trend, y); c.lineTo(COL.trend + TREND_W * g, y); c.stroke(); c.setLineDash([]);
+            }
           }
-          if (r.note && t >= (r.noteOn ?? 0)) pill(c, 720, y, r.note, { size: 30, bg: r.label === 'UBI' ? '#e9e4dc' : '#d8f5e8', fg: r.label === 'UBI' ? '#8a857d' : '#1f8a5b', align: 'right', max: 360 });
+          if (t >= r.noteOn) pill(c, COL.note, y, r.note, { size: 28, bg: r.muted ? '#e9e4dc' : GOOD.bg, fg: r.muted ? '#8a857d' : GOOD.fg, align: 'right', max: 340 });
           c.globalAlpha = 1;
         });
       });
@@ -238,9 +285,9 @@ export const scenes3: Scene[] = [
           for (const wd of words) { const nx = line ? `${line} ${wd}` : wd; if (c.measureText(nx).width > 740 && line) { out.push(line); line = wd; } else line = nx; }
           out.push(line);
           out.forEach((o) => { txt(c, o, -380, y, { size: 30, weight: i === 1 || i === 3 ? 600 : 500, max: 760 }); y += 44; });
-          y += 16;
+          y += 12;
         });
-        if (t > 169.56) { const a = smooth(171.0, 171.3, t); at(c, 0, 305, {}, () => { rr(c, -380, -30, 760, 60, 12); c.fillStyle = '#ffe0e4'; c.fill(); txt(c, a > 0.5 ? '✕ Delivery failed: noreply@acme.inc does not read replies' : 'Reply', -350, 0, { size: 24, weight: 700, color: a > 0.5 ? C.red : C.inkSoft, max: 700 }); }); }
+        if (t > 169.56) { const a = smooth(171.0, 171.3, t); at(c, 0, 328, {}, () => { rr(c, -380, -30, 760, 60, 12); c.fillStyle = '#ffe0e4'; c.fill(); txt(c, a > 0.5 ? '✕ Delivery failed: noreply@acme.inc does not read replies' : 'Reply', -350, 0, { size: 24, weight: 700, color: a > 0.5 ? C.red : C.inkSoft, max: 700 }); }); }
       });
       // before the planet shows up: the envelope, going to everyone
       const env = (1 - smooth(158.2, 159.4, t)) * pop(t, 152.0, 0.4);
@@ -251,8 +298,19 @@ export const scenes3: Scene[] = [
         mono(c, fmt(8142331907 * smooth(151.8, 153.8, t)), 0, 124, { size: 36, weight: 700, align: 'center', color: C.pink, max: 420 });
       });
       // "one planet, as-is": the price tag, then "5:00 PM"
-      if (t > 162.9) { const q = pop(t, 162.9, 0.4); at(c, cx + 560, cy - 190, { s: q, rot: 0.05 }, () => { card(c, 0, 0, 480, 150, { r: 18 }); txt(c, 'SEVERANCE PACKAGE', -210, -38, { size: 20, weight: 800, color: C.lavender, spacing: 3 }); txt(c, '1 planet, as-is', -210, 18, { size: 42, weight: 800, max: 440 }); }); }
-      if (t > 166.5) { const q = pop(t, 166.5, 0.4); at(c, cx + 560, cy + 340, { s: q }, () => { card(c, 0, 0, 480, 130, { r: 18 }); clockFace(c, -170, 0, 44, 5, 0); txt(c, 'Access ends', -100, -22, { size: 22, weight: 700, color: C.inkSoft }); mono(c, '5:00 PM', -100, 22, { size: 40, weight: 700, color: C.red }); }); }
+      if (t > 162.9) { const q = pop(t, 162.9, 0.4); at(c, cx + 560, cy - 190, { s: q, rot: 0.05 }, () => {
+        infoCard(c, { minW: 520, lineGap: 17, icon: { w: 96, h: 100, draw: parcelPlanet }, lines: [
+          { text: 'SEVERANCE PACKAGE', size: 20, weight: 800, color: C.lavender, spacing: 3 },
+          { text: '1 planet, as-is', size: 42, weight: 800, color: C.ink },
+          { text: 'no returns · no warranty', size: 20, weight: 600, color: C.inkSoft },
+        ] });
+      }); }
+      if (t > 166.5) { const q = pop(t, 166.5, 0.4); at(c, cx + 560, cy + 340, { s: q }, () => {
+        infoCard(c, { minW: 520, icon: { w: 88, h: 88, draw: (g) => clockFace(g, 0, 0, 44, 5, 0) }, lines: [
+          { text: 'Access ends', size: 24, weight: 700, color: C.inkSoft },
+          { text: '5:00 PM', size: 44, weight: 700, color: C.red, mono: true },
+        ] });
+      }); }
     },
   },
 
@@ -261,17 +319,45 @@ export const scenes3: Scene[] = [
     name: 'training', t0: 172.3, t1: 176.55, bg: ['#0c1228', '#241346'], glow: [C.teal, C.pink, C.lavender],
     draw: ({ c, t }) => {
       const fx = cx + 140, fy = cy - 60;
-      const srcs: [string, number, string][] = [['LETTERS', 300, C.sun], ['SONGS', 520, C.pink], ['NAMES', 740, C.teal]];
-      srcs.forEach(([label, y, col], si) => {
-        at(c, 200, y, { s: pop(t, 172.4 + si * 0.15, 0.4) }, () => { card(c, 0, 0, 280, 120, { r: 20 }); txt(c, label, 0, 0, { size: 32, weight: 800, color: col === C.sun ? '#d9a000' : col, align: 'center', spacing: 4 }); });
-        for (let i = 0; i < 22; i++) {
-          const ph = ((t - 172.5) * 0.9 + i / 22 + si * 0.13) % 1; if (t < 172.5) continue;
-          const sx = 340, sy = y, ex = fx, ey = fy - 100, u = ph, bx = lerp(sx, ex, u) , by2 = lerp(sy, ey, u * u * (3 - 2 * u));
-          const a = Math.sin(u * Math.PI);
+      const srcs: [string, string, number, string][] = [
+        ['TEXT', 'Austen, 1813 · public domain', 300, C.sun], ['AUDIO', 'every song, every voice', 520, C.pink], ['IMAGES', 'every photo, every face', 740, C.teal],
+      ];
+      const sx = 340, ex = fx, ey = fy - 100, started = t >= 172.5, tau = Math.max(0, t - 172.5);
+      srcs.forEach(([label, sub, y, col], si) => {
+        at(c, 200, y, { s: pop(t, 172.4 + si * 0.15, 0.4) }, () => {
+          card(c, 0, 0, 280, 120, { r: 20 });
+          txt(c, label, 0, -14, { size: 32, weight: 800, color: col === C.sun ? '#d9a000' : col, align: 'center', spacing: 4 });
+          txt(c, sub, 0, 28, { size: 16, weight: 600, color: C.inkSoft, align: 'center', max: 250 });
+        });
+        if (!started) return;
+        const path = (u: number): [number, number] => [lerp(sx, ex, u), lerp(y, ey, u * u * (3 - 2 * u))];
+        if (si === 0) {
+          // a real book (public domain), flowing into the funnel one glyph at a time
+          c.font = `600 34px ${SERIF}`;
+          if (BOOK_X.length === 0) { let x = 0; for (const ch of BOOK) { BOOK_X.push(x); x += c.measureText(ch).width; } BOOK_W = x; }
+          const span = ex - sx, loop = BOOK_W + 260;
+          c.textAlign = 'left'; c.textBaseline = 'middle';
+          for (let n = 0; n < BOOK.length; n++) {
+            const s = (BOOK_X[n] + 280 * tau + 700) % loop;
+            if (s > span || BOOK[n] === ' ') continue;
+            const u = s / span, [px, py] = path(u), [qx, qy] = path(Math.min(1, u + 0.01));
+            c.save(); c.translate(px, py - Math.sin(u * 3) * 20); c.rotate(Math.atan2(qy - py, qx - px));
+            c.globalAlpha = Math.pow(Math.sin(u * Math.PI), 0.7); c.fillStyle = col; c.font = `600 34px ${SERIF}`; c.fillText(BOOK[n], 0, 0);
+            c.restore();
+          }
+          c.globalAlpha = 1;
+          return;
+        }
+        for (let i = 0; i < 12; i++) {
+          const tt = tau * 0.9 + i / 12 + si * 0.13, u = tt - Math.floor(tt), cyc = Math.floor(tt), seed = cyc * 37 + i * 11 + si * 5;
+          const [px, py] = path(u), a = Math.sin(u * Math.PI);
           c.globalAlpha = a;
-          if (si === 0) txt(c, 'ABCDEFGHIJKLMNOPRSTUW'[i % 21], bx, by2 - Math.sin(u * 3) * 20, { size: 34, weight: 800, color: col, align: 'center' });
-          else if (si === 1) { c.fillStyle = col; c.beginPath(); c.arc(bx, by2, 9, 0, Math.PI * 2); c.fill(); c.fillRect(bx + 7, by2 - 28, 4, 28); c.fillRect(bx + 7, by2 - 28, 18, 6); }
-          else txt(c, ['Maria', 'Ahmed', 'Chen', 'Olu', 'Sofia', 'Kenji', 'Aisha'][i % 7], bx, by2, { size: 26, weight: 700, color: col, align: 'center' });
+          if (si === 1) { // audio: notes riding a wave
+            const size = 34 + rnd(seed) * 22;
+            txt(c, NOTES[Math.floor(rnd(seed + 1) * NOTES.length)], px, py + Math.sin(u * 14 + i) * 16, { size, weight: 700, color: rnd(seed + 2) < 0.5 ? C.pink : '#ffb3d6', align: 'center', font: SANS_SYMBOLS });
+          } else { // images: a random mock photo, a different one each pass
+            at(c, px, py, { rot: (rnd(seed + 3) - 0.5) * 0.5, s: 0.85 - 0.35 * u * u }, () => mockImage(c, Math.floor(rnd(seed) * MOCK_KINDS), seed));
+          }
           c.globalAlpha = 1;
         }
       });
@@ -295,7 +381,7 @@ export const scenes3: Scene[] = [
           rr(c, -340, 10, 680, 130, 14); c.fillStyle = '#f3eee6'; c.fill();
           txt(c, typed('You were great to work with.', t, 177.0, 24), -310, 44, { size: 28, weight: 500, max: 620 });
           at(c, 0, 220, { s: done ? 1.05 : 1 }, () => pill(c, 0, 0, done ? 'Submitted ✓' : 'Submit', { size: 34, bg: done ? C.green : C.pink, fg: '#fff', align: 'center' }));
-          if (t > 177.5) at(c, 0, 300, { s: pop(t, 177.75, 0.35) }, () => { card(c, 0, 0, 640, 90, { r: 18 }); check(c, -260, 0, 30); txt(c, 'Thanks for your feedback!', -210, 0, { size: 30, weight: 700, max: 460 }); });
+          if (t > 177.5) at(c, 0, 300, { s: pop(t, 177.75, 0.35) }, () => { infoCard(c, { minW: 640, padY: 24, icon: { w: 60, h: 60, draw: (g) => check(g, 0, 0, 30) }, lines: [{ text: 'Thanks for your feedback!', size: 30, weight: 700, color: C.ink }] }); });
         });
       } else {
         const s = pop(t, 178.6, 0.4);
@@ -431,7 +517,7 @@ export const scenes3: Scene[] = [
         c.strokeStyle = C.ink; c.lineWidth = 4; c.lineCap = 'round';
         const k = ramp(t, 214.0, 215.0); c.beginPath(); for (let j = 0; j <= 40 * k; j++) { const u = j / 40; j ? c.lineTo(-300 + u * 280, 160 + Math.sin(u * 16) * 20 * (1 - u * 0.4)) : c.moveTo(-300, 160); } c.stroke();
         c.fillStyle = '#e9e3d9'; c.fillRect(-320, 200, 320, 2); txt(c, 'agent-001 · CEO (avatar)', -320, 228, { size: 22, weight: 600, color: C.inkSoft });
-        at(c, 330, 150, { s: pop(t, 215.0, 0.4), rot: 0.1 }, () => { c.beginPath(); c.arc(0, 0, 90, 0, Math.PI * 2); c.fillStyle = C.red; c.fill(); c.lineWidth = 6; c.strokeStyle = '#fff'; c.beginPath(); c.arc(0, 0, 70, 0, Math.PI * 2); c.stroke(); star(c, 0, 0, 44, 1, '#fff'); });
+        at(c, 350, 138, { s: pop(t, 215.0, 0.4), rot: 0.08 }, () => goldSeal(c, 82, ramp(t, 215.45, 216.25), ramp(t, 215.5, 216.6)));
       });
     },
   },
