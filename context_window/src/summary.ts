@@ -39,7 +39,7 @@ export class SummaryCard {
     const hotFlicker = Math.floor(t * 10) % 7 === 0;
 
     this.tex.draw(shown.join('|') + cur + hotFlicker, (ctx) => {
-      ctx.fillStyle = 'rgba(9, 11, 17, 0.94)';
+      ctx.fillStyle = 'rgb(9, 11, 17)';
       roundRect(ctx, 6, 6, W - 12, H - 12, 22);
       ctx.fill();
       ctx.strokeStyle = 'rgba(255, 157, 92, 0.75)';

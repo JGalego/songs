@@ -18,7 +18,7 @@ import { RetroShader } from './post';
 import { SummaryCard } from './summary';
 import { loadFonts, setTextScale } from './text';
 import {
-  COMPACTION, CUT, DURATION, FLOW_SPEED, LYRICS, MESSAGES, NAME_WINDOWS, SECTIONS, sectionAt,
+  COMPACTION, CONTEXT_MAX, CUT, DURATION, FLOW_SPEED, LYRICS, MESSAGES, NAME_WINDOWS, SECTIONS, TOKENS, sectionAt,
 } from './timeline';
 import { Tunnel } from './tunnel';
 
@@ -84,20 +84,17 @@ composer.addPass(retro);
 
 // ── look curves
 const TUNNEL_OPACITY: [number, number][] = [
-  // calm verses, building pre-choruses, medium choruses, near-empty bridge, all-out final chorus
-  [0, 0], [3, 0], [12, 0.3], [20.5, 0.4], [62.8, 0.4], [76.3, 0.9], [101.8, 0.9], [104, 0.45],
-  [108, 0.4], [129, 0.4], [141.9, 0.95], [168.8, 0.95], [176, 0.5], [180.5, 0.06], [214, 0.06],
-  [218.4, 0.8], [CUT - 0.01, 1.3], [CUT, 0], [259, 0], [265, 0.25], [270, 0.25], [DURATION, 0],
+  // density comes from the token count (uFill); this only sets how bright the walls are per section
+  [0, 0], [3, 0], [12, 0.6], [20.5, 0.85], [62.8, 0.85], [76.3, 1.1], [101.8, 1.1], [104, 0.9],
+  [108, 0.85], [129, 0.9], [141.9, 1.15], [168.8, 1.15], [176, 0.8], [180.5, 0.5], [214, 0.5],
+  [218.4, 1], [CUT - 0.01, 1.4], [CUT, 0], [259, 0], [265, 0.5], [270, 0.5], [DURATION, 0],
 ];
 // crisp by default; pixels degrade only at the big moments
 const PIXEL: [number, number][] = [
   [0, 8], [10, 1], [COMPACTION - 0.3, 1], [COMPACTION, 5], [COMPACTION + 1.5, 1], [238, 1],
   [CUT - 0.01, 12], [CUT, 1], [DURATION, 1],
 ];
-// letters only surface when it matters: the compaction glitch and the final collapse
-const LETTERS: [number, number][] = [
-  [0, 0], [COMPACTION - 0.3, 0], [COMPACTION, 1], [COMPACTION + 1.2, 0], [224, 0], [CUT - 0.01, 1], [CUT, 0],
-];
+const BG = new THREE.Color();
 const FADE: [number, number][] = [[0, 1], [2.5, 0], [271, 0], [DURATION, 1]];
 const isChorus = (t: number) => NAME_WINDOWS.reduce((a, [s, e]) => Math.max(a, window01(t, s - 0.5, e, 1)), 0);
 
@@ -128,13 +125,15 @@ function render(t: number) {
   u.uKick.value = kick * energy;
   u.uHot.value = hot;
   u.uOpacity.value = tOpacity;
-  u.uLetters.value = keyframes(LETTERS, t);
+  u.uChorus.value = chorus;
+  // the walls fill with the conversation's words as the context fills (a few stray words even when it's empty)
+  u.uFill.value = Math.max(Math.pow(keyframes(TOKENS, t) / CONTEXT_MAX, 0.75), 0.05 * smoothstep(2, 10, t));
   u.uEnergy.value = energy;
   u.uScramble.value = 0.003 + chorus * 0.008 + nearCut * 0.5 + compactBurst * 0.3;
 
   const glitch = Math.max(compactBurst, nearCut * 0.9, chorus * kick * 0.35);
   edge.update(t, {
-    opacity: Math.min(1, tOpacity), bass: bass * (0.3 + 0.7 * energy), kick: kick * energy, hot,
+    opacity: tOpacity, bass: bass * (0.3 + 0.7 * energy), kick: kick * energy, hot, chorus,
     nameOn: NAME_WINDOWS.reduce((a, [s, e]) => Math.max(a, window01(t, s, e, 0.3)), 0),
   });
   messages.update(t, (x) => flow.at(x), glitch);
@@ -144,13 +143,20 @@ function render(t: number) {
   // camera: slow sway, kick nudges; push in on the summary card in the bridge
   const push = smoothstep(209, 215.2, t) * (1 - smoothstep(215.2, 218.4, t));
   camera.position.set(Math.sin(t * 0.13) * 0.25, Math.sin(t * 0.17) * 0.18 + kick * energy * 0.03, -push * 2.6);
-  camera.rotation.set(0, 0, Math.sin(t * 0.11) * 0.03 + hot * Math.sin(t * 0.8) * 0.05);
-  camera.fov = 62 - bass * energy * 2 + nearCut * 16;
+  // choruses: a slow barrel roll, and the lens punches in on the kicks
+  camera.rotation.set(0, 0, Math.sin(t * 0.11) * 0.03 + chorus * Math.sin(t * 0.21) * 0.14 + hot * Math.sin(t * 0.8) * 0.05);
+  camera.fov = 62 - bass * energy * 2 - kick * chorus * 2.5 + nearCut * 16;
   camera.updateProjectionMatrix();
 
   // post
-  bloom.enabled = t >= 218.4; // glow is reserved for the final chorus and the ending
-  bloom.strength = (0.6 + bass * 0.6 * energy + hot * 0.5) * (t >= CUT && t < 259 ? 0.35 : 1);
+  // glow in the choruses (gentler in the first two) and through the ending
+  bloom.enabled = chorus > 0.01 || t >= 218.4;
+  bloom.strength = t >= 218.4
+    ? (0.6 + bass * 0.6 * energy + hot * 0.5) * (t >= CUT && t < 259 ? 0.35 : 1)
+    : chorus * (0.5 + bass * 0.4);
+  // the choruses light the void behind the tunnel a deep violet
+  const violet = chorus * (t < CUT ? 1 : 0) * (1 - hot * 0.6);
+  renderer.setClearColor(BG.setRGB(0.022 * violet, 0.002 * violet, 0.05 * violet), 1);
   const ru = retro.uniforms;
   ru.uTime.value = t;
   ru.uPixel.value = keyframes(PIXEL, t) * (H / 1080);

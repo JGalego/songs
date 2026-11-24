@@ -8,11 +8,15 @@ const PX_PER_UNIT = 320;
 const W = 1000;
 export const EDGE_DIST = 34;
 export const CARD_POS = new THREE.Vector3(0, 0.1, -7);
+/** Where a new message sits, big and readable, until the next one arrives (or HOLD seconds pass). */
+const HERO = 2.7;
+const HOLD = 9;
 
 const STYLE = {
-  user: { label: 'you', fg: '#e3ecff', bg: 'rgba(38, 58, 96, 0.88)', accent: '#7fa8ff' },
-  assistant: { label: 'assistant', fg: '#ffeadb', bg: 'rgba(28, 16, 10, 0.55)', accent: '#ff9d5c' },
-  file: { label: 'you · attachment', fg: '#e3ecff', bg: 'rgba(20, 26, 40, 0.88)', accent: '#7fa8ff' },
+  // opaque fills: overlapping bubbles must hide each other, not show through
+  user: { label: 'user', fg: '#e3ecff', bg: 'rgb(38, 58, 96)', accent: '#7fa8ff' },
+  assistant: { label: 'assistant', fg: '#ffeadb', bg: 'rgb(36, 21, 13)', accent: '#ff9d5c' },
+  file: { label: 'user · attachment', fg: '#e3ecff', bg: 'rgb(20, 26, 40)', accent: '#7fa8ff' },
 };
 
 function drawBubble(m: Message): CanvasTex {
@@ -47,7 +51,7 @@ function drawBubble(m: Message): CanvasTex {
     ctx.textBaseline = 'top';
     ctx.font = `700 24px ${MONO}`;
     ctx.fillStyle = s.accent;
-    ctx.fillText(s.label.toUpperCase(), pad + 6, pad - 6);
+    ctx.fillText((m.label ?? s.label).toUpperCase(), pad + 6, pad - 6);
 
     ctx.font = textFont;
     ctx.fillStyle = s.fg;
@@ -62,22 +66,25 @@ function drawBubble(m: Message): CanvasTex {
   return tex;
 }
 
-interface Bubble { msg: Message; mesh: THREE.Mesh; mat: DissolveMaterial; w: number; h: number; index: number }
+interface Bubble { msg: Message; mesh: THREE.Mesh; mat: DissolveMaterial; w: number; h: number; index: number; next: number }
 
 /** The chat messages: drift toward the edge, dissolve there; in the bridge they return as ghosts and get folded. */
 export class Messages {
   readonly group = new THREE.Group();
   private bubbles: Bubble[] = [];
+  private ghosts: number;
 
   constructor(messages: Message[]) {
+    this.ghosts = messages.filter((m) => !m.loop).length;
     messages.forEach((msg, index) => {
+      const next = messages.find((o) => o.t > msg.t && !o.loop)?.t ?? Infinity;
       const tex = drawBubble(msg);
       const w = tex.w / PX_PER_UNIT, h = tex.h / PX_PER_UNIT;
       const mat = dissolveMaterial(tex.texture, w / h);
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
       mesh.renderOrder = 10;
       this.group.add(mesh);
-      this.bubbles.push({ msg, mesh, mat, w, h, index });
+      this.bubbles.push({ msg, mesh, mat, w, h, index, next });
     });
   }
 
@@ -98,16 +105,22 @@ export class Messages {
       const ghostPhase = !msg.loop && t >= COMPACTION - 0.2;
 
       if (!ghostPhase) {
-        // newer messages push older ones back
-        let push = 0;
-        for (const o of live) if (o.msg.t > msg.t) push += 1.25 * smoothstep(0, 0.7, t - o.msg.t);
-        const dist = msg.loop ? 3.6 + age * age * 1.6 : 3.6 + (flow - flowAt(msg.t)) + push;
+        // a new message holds close to the camera; the next one (or HOLD running out) pushes it down the tunnel,
+        // where it drifts with the flow until it dissolves at the edge
+        let dist = HERO + age * age * 1.6;
+        if (!msg.loop) {
+          const leave = Math.min(b.next, msg.t + HOLD);
+          let push = 0;
+          for (const o of live) if (o.msg.t > msg.t && !o.msg.loop) push += 1.4 * smoothstep(0, 0.8, t - o.msg.t);
+          if (leave < b.next) push += 1.4 * smoothstep(leave, leave + 0.8, t);
+          dist = HERO + Math.min(age, HOLD) * 0.03 + push + Math.max(0, flow - flowAt(leave));
+        }
         const dissolve = smoothstep(EDGE_DIST - 12, EDGE_DIST - 1, dist);
         if (dissolve >= 1) continue;
         const enter = smoothstep(0, 0.6, age);
         mesh.visible = true;
         mesh.renderOrder = 10;
-        mesh.position.set(side * 1.05, 0.25 - (1 - enter) * 0.4 + Math.sin(t * 0.6 + b.index) * 0.05, -dist);
+        mesh.position.set(side * 0.9, 0.25 - (1 - enter) * 0.4 + Math.sin(t * 0.6 + b.index) * 0.05, -dist);
         mesh.scale.setScalar(lerp(0.92, 1, enter));
         mesh.rotation.set(0, -side * 0.06, Math.sin(t * 0.4 + b.index * 2) * 0.01);
         mat.uniforms.uOpacity.value = enter;
@@ -117,7 +130,7 @@ export class Messages {
 
       // ── bridge: ghosts of everything that was summarized, then folded into bullet points
       // an ellipse of ghosts framing the summary card
-      const ang = (b.index / 12) * Math.PI * 2 + 0.3;
+      const ang = (b.index / this.ghosts) * Math.PI * 2 + 0.3;
       const ghost = new THREE.Vector3(Math.cos(ang) * 7.6, Math.sin(ang) * 4.3, -12 - hash(b.index) * 3);
       const appear = smoothstep(COMPACTION + 0.5 + b.index * 0.15, COMPACTION + 2.5 + b.index * 0.15, t);
       const s0 = FOLD_START + b.index * 0.32;

@@ -103,10 +103,10 @@ export class Hud {
     const cx = 800, cy = 400;
 
     // "New conversation."
-    const nc = q(window01(t, 11.6, 17.5, 1));
+    const nc = q(window01(t, 11.6, 16.6, 0.8)); // out of the way before Maya's first message
     if (nc > 0) {
       const s = typed('New conversation.', t, 11.66, 1.1);
-      const c = t < 17 ? cursor(t) : ' ';
+      const c = t < 16.2 ? cursor(t) : ' ';
       parts.push(`nc${nc}${s}${c}`);
       ops.push((ctx) => {
         ctx.globalAlpha = nc;
