@@ -104,7 +104,6 @@ const isChorus = (t: number) => NAME_WINDOWS.reduce((a, [s, e]) => Math.max(a, w
 const song = new Song(songUrl);
 const debug = document.getElementById('debug')!;
 const startEl = document.getElementById('start')!;
-startEl.textContent = '[ analyzing audio… ]';
 // still frames don't need audio; everything else uses the precomputed analysis
 const features = STILL !== null ? null : await AudioFeatures.fromUrl(songUrl);
 
@@ -197,7 +196,18 @@ function live() {
 
   const seek = (t: number) => { song.el.currentTime = Math.max(0, Math.min(DURATION - 0.05, t)); };
   if (STILL !== null) startEl.remove();
-  else startEl.textContent = '[ click to start a new conversation ]';
+  else {
+    startEl.textContent = '[ click to start a new conversation ]';
+    startEl.setAttribute('role', 'button');
+    startEl.tabIndex = 0;
+    startEl.focus();
+  }
+  startEl.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    e.stopPropagation(); // don't let the global Space handler toggle playback too
+    startEl.click();
+  });
   startEl.addEventListener('click', async () => {
     seek(Number(params.get('t') ?? 0));
     await song.el.play();

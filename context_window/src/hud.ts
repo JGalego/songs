@@ -102,20 +102,6 @@ export class Hud {
     const ops: ((ctx: CanvasRenderingContext2D) => void)[] = [];
     const cx = 800, cy = 400;
 
-    // title card
-    const title = q(window01(t, 4.5, 10, 1.2));
-    if (title > 0) {
-      parts.push(`title${title}`);
-      ops.push((ctx) => {
-        ctx.globalAlpha = title;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = `400 170px ${PIXEL}`;
-        ctx.fillStyle = '#ffb38a';
-        ctx.fillText('CONTEXT WINDOW', cx, cy);
-      });
-    }
-
     // "New conversation."
     const nc = q(window01(t, 11.6, 17.5, 1));
     if (nc > 0) {

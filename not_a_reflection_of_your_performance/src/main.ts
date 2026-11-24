@@ -130,7 +130,6 @@ const chorus = (t: number) => CHORUSES.reduce((a, [s, e]) => Math.max(a, window0
 const song = new Song(songUrl);
 const debug = document.getElementById('debug')!;
 const startEl = document.getElementById('start')!;
-startEl.textContent = '[ analyzing audio… ]';
 const features = STILL !== null ? null : await AudioFeatures.fromUrl(songUrl);
 
 /** Draws the frame at time t. Pure function of t, so live playback and export match exactly. */
@@ -226,7 +225,18 @@ function live() {
 
   const seek = (t: number) => { song.el.currentTime = Math.max(0, Math.min(DURATION - 0.05, t)); };
   if (STILL !== null) startEl.remove();
-  else startEl.textContent = '[ click to join the quick sync ]';
+  else {
+    startEl.textContent = '[ click to join the quick sync ]';
+    startEl.setAttribute('role', 'button');
+    startEl.tabIndex = 0;
+    startEl.focus();
+  }
+  startEl.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    e.stopPropagation(); // don't let the global Space handler toggle playback too
+    startEl.click();
+  });
   startEl.addEventListener('click', async () => {
     seek(Number(params.get('t') ?? 0));
     await song.el.play();
