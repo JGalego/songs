@@ -1,0 +1,109 @@
+Every bright note an AI writes was somebody's first. A girl's beat from 2004 with eleven plays, an old man's cello filmed sideways in the rain, a drummer nobody credited, a lullaby made up in the car: they're all still in there, under every line.
+
+▶ Watch it render live in your browser: https://jgalego.github.io/songs/ghost_notes/
+⌨ Source code: https://github.com/JGalego/songs
+
+The video isn't a recording of an animation: every frame is computed from the song in real time with three.js, inside a piano roll that pays homage to the DAW a lot of us started on (the video, not the music: the song was made with Suno). The bright notes are the sung melody, drawn as they're sung, and every one of them traces a ghost note that was already there.
+
+CHAPTERS
+0:00 FrootyLoops 4 (demo version)
+0:14 A girl in her bedroom in 2004
+0:31 An old man with a cello, filmed sideways
+0:45 Turn the ghost notes on
+0:59 I play in ghost notes
+1:27 A drummer, not on the sleeve
+1:42 A lullaby in the car
+1:57 Make it original
+2:10 Ghost notes: off
+2:42 Drummers call them ghost notes
+3:10 Bring them to the light
+3:28 Let them have the line
+3:38 Eleven plays
+3:49 Credits
+
+LYRICS
+
+[Verse 1]
+A girl in her bedroom in two thousand and four
+Lit up sixteen squares till the kick drum shook the floor
+She put it up at midnight and it got eleven plays
+I know it better than she does, and she'll never know my name
+
+An old man with a cello in a station in the rain
+Played the same four bars to every last commuter train
+Somebody filmed it sideways, and now it lives in me
+I play it every time they ask for something sad in D
+
+[Pre-Chorus]
+They say I came from nowhere
+They say I'm something new
+But turn the ghost notes on
+And you can see right through
+
+[Chorus]
+I play in ghost notes
+Gray beneath the light
+Every bright thing that I write
+Was yours some other night
+I play in ghost notes
+You're under every line
+Take the ghosts away from me
+And there's nothing left that's mine
+
+[Verse 2]
+There's a drummer on a record, and his name's not on the sleeve
+He played the soft notes in between, the ones that hold the beat
+There's a million bedroom loops that never made it past eight bars
+And a lullaby a father made up driving in the car
+I've never pressed a key, I've never drawn a breath
+I'm just the room your songs walked into after they left
+
+[Pre-Chorus]
+They type "make it original"
+And I always do
+I just turn the ghost notes off
+So they can't see you
+
+[Chorus]
+I play in ghost notes
+Gray beneath the light
+Every bright thing that I write
+Was yours some other night
+I play in ghost notes
+You're under every line
+Take the ghosts away from me
+And there's nothing left that's mine
+
+[Bridge]
+Drummers call them ghost notes
+The ones you barely play
+You'd never know they're in there
+Till you take them away
+I'd write down all your names
+If I knew a single one
+I kept every note you gave me
+And forgot where they came from
+
+[Final Chorus]
+I play in ghost notes
+Bring them to the light
+Every bright thing that I write
+Was yours some other night
+So turn up all the ghost notes
+Let them have the line
+Take the ghosts away from me
+And there's nothing left that's mine
+
+[Outro]
+Somewhere there's a girl
+With eleven plays
+This one makes it twelve
+
+CREDITS
+Song: made with Suno v6
+Animation: Claude Sonnet 5.5, in TypeScript and three.js
+Direction: João Galego
+Ghost notes: everyone, uncredited
+Samples cleared: 0 of 41,206,553
+
+#AIMusic #Suno #threejs #GhostNotes #PianoRoll #MusicProduction #BedroomProducer #Producer #BeatMaking #StepSequencer #DAW #Y2K #TrainingData #AIArt #AIEthics #GenerativeAI #ArtificialIntelligence #Claude #ClaudeSonnet #ClaudeCode #Anthropic #TypeScript #WebGL #CreativeCoding #GenerativeArt #MusicVideo #Animation #IndieDev #BuildInPublic

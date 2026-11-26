@@ -10,6 +10,7 @@ Each folder holds one song: the audio, the video's source code, and a CLI that e
 | **Context Window** | [`context_window/`](context_window/) | An AI's love song to a user it's slowly forgetting as the context fills up: compaction, `user.name → undefined`, and a fresh "Hello! How can I help you today?" |
 | **Somebody Wanted Something** | [`somebody_wanted_something/`](somebody_wanted_something/) | A museum walk through the future history of software, from 2026 to 9595, as the interface disappears one era at a time, then back down to fire. |
 | **Not a Reflection of Your Performance** | [`not_a_reflection_of_your_performance/`](not_a_reflection_of_your_performance/) | The end of humanity as a series of layoff emails: interns, juniors, managers, the CEO, then the species. p(doom) is up 12%, ahead of guidance. |
+| **Ghost Notes** | [`ghost_notes/`](ghost_notes/) | An AI sings to the musicians it learned from, inside a 2004-style piano roll: every bright note it writes traces a ghost note somebody else played first. |
 
 ## Running a video
 
