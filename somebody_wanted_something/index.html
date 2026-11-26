@@ -15,6 +15,19 @@
       }
       #start[role="button"] { cursor: pointer; }
       #start:focus { outline: none; }
+      #end {
+        position: fixed; inset: 0; display: flex; gap: 2.5em; align-items: center; justify-content: center;
+        color: #e8e1d4; font: 400 30px "EB Garamond", Georgia, serif; font-style: italic; letter-spacing: 0.08em;
+        opacity: 0; visibility: hidden; transition: opacity 0.8s, visibility 0s 0.8s;
+      }
+      #end.show { opacity: 1; visibility: visible; transition: opacity 0.8s; }
+      #end button {
+        font: inherit; color: inherit; letter-spacing: inherit; background: none; border: 0; padding: 0.4em 0.6em;
+        cursor: pointer; opacity: 0.55; transition: opacity 0.2s; -webkit-tap-highlight-color: transparent;
+      }
+      #end button::before { content: '[ '; }
+      #end button::after { content: ' ]'; }
+      #end button:hover, #end button:focus { opacity: 1; outline: none; }
       #debug {
         position: fixed; left: 8px; top: 8px; padding: 6px 10px; display: none; white-space: pre;
         color: #9f9; background: rgba(0,0,0,.7); font: 12px "JetBrains Mono", monospace; pointer-events: none;
@@ -24,6 +37,7 @@
   <body>
     <div id="stage"></div>
     <div id="start">[ analyzing audio… ]</div>
+    <div id="end"><button type="button">Play again?</button><button type="button">Exit</button></div>
     <div id="debug"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

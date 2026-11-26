@@ -13,6 +13,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import songUrl from '../not_a_reflection_of_your_performance.mp3?url';
 import { Song } from './audio';
+import { endScreen } from './end';
 import { AudioFeatures } from './features';
 import { shots } from './camera';
 import { Globe, Sun } from './globe';
@@ -243,6 +244,7 @@ function live() {
     await song.el.play();
     startEl.remove();
   }, { once: true });
+  endScreen(song);
 
   addEventListener('keydown', (e) => {
     const t = song.el.currentTime;

@@ -11,6 +11,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import songUrl from '../somebody_wanted_something.mp3?url';
 import { Song } from './audio';
+import { endScreen } from './end';
 import { AudioFeatures } from './features';
 import { Hud } from './hud';
 import { clamp, keyframes, lerp, smoothstep, window01 } from './math';
@@ -198,6 +199,7 @@ function live() {
     await song.el.play();
     startEl.remove();
   }, { once: true });
+  endScreen(song);
 
   addEventListener('keydown', (e) => {
     const t = song.el.currentTime;
