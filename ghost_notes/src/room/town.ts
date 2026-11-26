@@ -6,16 +6,20 @@ import { canvas, rnd } from './kit';
 
 const HAZE = new THREE.Color('#2f3a78');
 
+// Per-house values are `flat`: interpolating a constant across a triangle is only nearly exact on some GPUs, and a
+// hash turns that last bit of error into per-pixel noise in the windows.
 const VERT = /* glsl */ `
-  varying vec3 vLocal, vN, vON, vScale, vColor;
-  varying float vDist, vId;
+  varying vec3 vLocal, vN, vON;
+  flat varying vec3 vScale, vColor;
+  flat varying float vId;
+  varying float vDist;
   void main() {
     vLocal = position;
     vON = normal;
     vScale = vec3(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz), length(instanceMatrix[2].xyz));
     vN = normalize(mat3(instanceMatrix) * normal);
     vColor = instanceColor;
-    vId = instanceMatrix[3].x * 7.13 + instanceMatrix[3].z * 3.71;
+    vId = float(gl_InstanceID);
     vec4 mv = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
     vDist = -mv.z;
     gl_Position = projectionMatrix * mv;
@@ -24,9 +28,16 @@ const VERT = /* glsl */ `
 const FRAG = /* glsl */ `
   uniform float uTime, uRoof;
   uniform vec3 uHaze, uMoon;
-  varying vec3 vLocal, vN, vON, vScale, vColor;
-  varying float vDist, vId;
-  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  varying vec3 vLocal, vN, vON;
+  flat varying vec3 vScale, vColor;
+  flat varying float vId;
+  varying float vDist;
+  // an integer hash of (window cell, house, wall, salt): the same bits on every GPU, unlike fract(sin(big number))
+  float hash(vec2 cell, float id, float salt) {
+    uint h = uint(int(cell.x) + 512) * 73856093u ^ uint(int(cell.y) + 512) * 19349663u ^ uint(id) * 83492791u ^ uint(salt) * 2654435761u;
+    h ^= h >> 16; h *= 0x7feb352du; h ^= h >> 15; h *= 0x846ca68bu; h ^= h >> 16;
+    return float(h >> 8) / 16777216.0;
+  }
   void main() {
     // two tones: faces the moon catches, and the rest
     float lit = step(0.15, dot(vN, uMoon));
@@ -41,12 +52,14 @@ const FRAG = /* glsl */ `
       vec2 cell = floor(g), f = fract(g);
       float pane = step(0.26, f.x) * step(f.x, 0.74) * step(0.24, f.y) * step(f.y, 0.8);
       pane *= step(0.5, v) * step(v, vScale.y - 0.7);
-      float h = hash(cell + vId + side * 17.0 + vON.z * 5.0);
+      // which of the four walls: 0..3
+      float wall = side * 2.0 + step(0.0, mix(vON.z, vON.x, side));
+      float h = hash(cell, vId, wall);
       float on = step(0.68, h);
       // someone goes to bed, someone gets up for a glass of water
-      float restless = step(0.9, hash(cell * 1.7 + vId + 3.0));
+      float restless = step(0.9, hash(cell, vId, wall + 4.0));
       on = mix(on, step(0.2, sin(uTime * (0.18 + h * 0.2) + h * 60.0)), restless);
-      vec3 warm = mix(vec3(1.0, 0.62, 0.28), vec3(1.0, 0.85, 0.5), hash(cell + vId + 9.0));
+      vec3 warm = mix(vec3(1.0, 0.62, 0.28), vec3(1.0, 0.85, 0.5), hash(cell, vId, wall + 8.0));
       // a cross of glazing bars on the lit ones
       float bars = 1.0 - 0.5 * (step(abs(f.x - 0.5), 0.025) + step(abs(f.y - 0.52), 0.02));
       vec3 dark = vColor * 0.22 + vec3(0.01, 0.015, 0.04);
