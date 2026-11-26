@@ -102,8 +102,9 @@ This one makes it twelve
 CREDITS
 Song: made with Suno v6
 Animation: Claude Sonnet 5.5, in TypeScript and three.js
+Bedroom: Claude Fable 5.2
 Direction: João Galego
 Ghost notes: everyone, uncredited
 Samples cleared: 0 of 41,206,553
 
-#AIMusic #Suno #threejs #GhostNotes #PianoRoll #MusicProduction #BedroomProducer #Producer #BeatMaking #StepSequencer #DAW #Y2K #TrainingData #AIArt #AIEthics #GenerativeAI #ArtificialIntelligence #Claude #ClaudeSonnet #ClaudeCode #Anthropic #TypeScript #WebGL #CreativeCoding #GenerativeArt #MusicVideo #Animation #IndieDev #BuildInPublic
+#AIMusic #Suno #threejs #GhostNotes #PianoRoll #MusicProduction #BedroomProducer #Producer #BeatMaking #StepSequencer #DAW #Y2K #TrainingData #AIArt #AIEthics #GenerativeAI #ArtificialIntelligence #Claude #ClaudeSonnet #ClaudeFable #ClaudeCode #LofiGirl #Lofi #Anthropic #TypeScript #WebGL #CreativeCoding #GenerativeArt #MusicVideo #Animation #IndieDev #BuildInPublic

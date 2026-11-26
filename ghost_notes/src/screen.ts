@@ -70,16 +70,6 @@ export class Monitor {
     });
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(SCREEN_W, SCREEN_H), this.mat);
     screen.position.z = 0.02;
-    // a beige 2004 monitor: bezel, deep back, a little stand
-    const plastic = new THREE.MeshStandardMaterial({ color: new THREE.Color('#cdc2a9'), roughness: 0.6 });
-    const bezel = new THREE.Mesh(new THREE.BoxGeometry(SCREEN_W + 0.7, SCREEN_H + 0.75, 0.35), plastic);
-    bezel.position.set(0, -0.05, -0.16);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(SCREEN_W - 0.4, SCREEN_H - 0.3, 2.4), new THREE.MeshStandardMaterial({ color: new THREE.Color('#bdb299'), roughness: 0.7 }));
-    back.position.z = -1.5;
-    const stand = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.25, 1.4), new THREE.MeshStandardMaterial({ color: new THREE.Color('#c2b79e'), roughness: 0.7 }));
-    stand.position.set(0, -SCREEN_H / 2 - 0.55, -0.8);
-    const led = new THREE.Mesh(new THREE.CircleGeometry(0.035, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color('#7dff8a') }));
-    led.position.set(SCREEN_W / 2 + 0.05, -SCREEN_H / 2 - 0.3, 0.02);
     // the screen's light on the desk and the wall
     this.glow = new THREE.Mesh(
       new THREE.PlaneGeometry(14, 9),
@@ -91,7 +81,7 @@ export class Monitor {
       }),
     );
     this.glow.position.z = -2.9;
-    this.group.add(this.room.group, this.glow, back, bezel, stand, led, screen);
+    this.group.add(this.room.group, this.glow, screen);
   }
 
   /** Point on the screen (canvas px) in the monitor's local space. */
@@ -99,8 +89,10 @@ export class Monitor {
     return new THREE.Vector3((px / SW - 0.5) * SCREEN_W, (0.5 - py / SH) * SCREEN_H, 0.02);
   }
 
-  update(t: number, o: { power: number; kick: number; heard: number; girl: boolean }) {
-    this.room.update(t, { power: o.power, kick: o.kick, girl: o.girl });
+  update(t: number, o: { power: number; kick: number; heard: number; girl: boolean; nod: number; beat: number }) {
+    // her mouse hand follows the pointer on the screen
+    const mouse = o.girl ? (cursorAt(t).x / SW) * 2 - 1 : 0;
+    this.room.update(t, { power: o.power, kick: o.kick, girl: o.girl, nod: o.nod, beat: o.beat, mouse });
     this.mat.uniforms.uPower.value = o.power;
     this.mat.uniforms.uTime.value = t;
     this.mat.uniforms.uBright.value = 0.92 + o.kick * 0.1;
@@ -354,9 +346,8 @@ function browser(c: CanvasRenderingContext2D, t: number, heard: number) {
 }
 
 /** Her mouse pointer: clicks the sixteen squares, then the export button. */
-function cursor2004(c: CanvasRenderingContext2D, t: number) {
-  if (t < RACK_OPEN + 0.6 || (t > PAGE && !outro(t)) || outro(t)) return;
-  let x = 700, y = 820, down = false;
+function cursorAt(t: number) {
+  let x = 860, y = 900, down = false;
   const per = (CLICKS[1] - CLICKS[0]) / 16;
   if (t < CLICKS[0]) {
     const k = smooth(CLICKS[0] - 2.2, CLICKS[0], t);
@@ -375,5 +366,11 @@ function cursor2004(c: CanvasRenderingContext2D, t: number) {
     x = lerp(r.x + 22, 70, k); y = lerp(r.y + 30, 80, k);
     down = t > RENDER - 0.15 && t < RENDER + 0.05;
   }
+  return { x, y, down };
+}
+
+function cursor2004(c: CanvasRenderingContext2D, t: number) {
+  if (t < RACK_OPEN + 0.6 || (t > PAGE && !outro(t)) || outro(t)) return;
+  const { x, y, down } = cursorAt(t);
   pointer(c, x, y, 1.5, down);
 }

@@ -14,6 +14,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import songUrl from '../ghost_notes.mp3?url';
 import { Song } from './audio';
+import { endScreen } from './end';
 import { AudioFeatures } from './features';
 import { keyframes, smoothstep, window01 } from './math';
 import { Monitor, SCREEN_H, SCREEN_W } from './screen';
@@ -22,7 +23,8 @@ import { BX, KEYS_AT, LZ, Roll, Y } from './roll';
 import { N_LAYERS } from './songs';
 import { loadFonts, setTextScale } from './text';
 import {
-  ASK, CHORUSES, DEFINITION, DELETE, DIVE, DURATION, FORGOT, GHOSTS, GHOST_GLOW, GIRL, HEARD, KEPT, KEYS, LIGHT, LIVES_IN_ME,
+  ASK, CHORUSES, DEFINITION, DELETE, DIVE, DURATION, FORGOT, GHOSTS, GHOST_GLOW, GIRL, HEARD, KEPT, KEYS, KICK_IN, LIGHT,
+  LIVES_IN_ME,
   MEMO, MIXER, NOTHING, NOWHERE, PLAYLIST, PULL_BACK, RENAME, ROLL_IN, ROOM, SECTIONS, SEE_THROUGH, TAKE_AWAY, THE_LINE,
   UNDER, VELOCITY, YOURS, beatAt, sectionAt,
 } from './timeline';
@@ -37,6 +39,8 @@ const FPS = Number(params.get('fps') ?? 60);
 const FROM = Number(params.get('from') ?? 0); // export a slice: &from=40&dur=5
 const RES = EXPORT ?? Number(params.get('res') ?? Math.min(2160, Math.max(720, Math.round(fitted))));
 const STILL = params.has('still') ? Number(params.get('still')) : null; // ?still=180 renders one frozen frame, no audio
+// ?cam=x,y,z,lx,ly,lz[,fov]: park the bedroom camera (position, look-at; relative to the screen), for modelling
+const DEBUG_CAM = params.has('cam') ? params.get('cam')!.split(',').map(Number) : null;
 const W = Math.round((RES * 16) / 9), H = RES;
 
 // ── renderer
@@ -44,6 +48,8 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'hi
 renderer.setPixelRatio(1);
 renderer.setSize(W, H, false);
 renderer.setClearColor(0x000000, 1);
+renderer.shadowMap.enabled = true; // the bedroom's lamp and moon cast shadows
+renderer.shadowMap.type = THREE.PCFShadowMap;
 document.getElementById('stage')!.appendChild(renderer.domElement);
 function fit() {
   const s = Math.min(innerWidth / W, innerHeight / H);
@@ -163,29 +169,35 @@ function rollCamera(t: number, P: number) {
 }
 
 /**
- * The 2004 bedroom: open wide on the room from behind her and push in to the screen during the splash; pull back over
- * her shoulder on "I know it better than she does"; dive into the screen. Years later: close on the screen, then back
- * out to the room, her chair empty, as the credits roll.
+ * The 2004 bedroom. Open on the room from behind her, drifting; swing in past her shoulder to the screen while the
+ * app loads. We never see her face: the camera stays behind her. Later, pull back over her other shoulder and dive
+ * through the screen. Years on: the screen again, then back out to the room, her chair empty, for the credits.
  */
+const bez = (a: THREE.Vector3, k: THREE.Vector3, b: THREE.Vector3, u: number) =>
+  a.clone().multiplyScalar((1 - u) * (1 - u)).addScaledVector(k, 2 * u * (1 - u)).addScaledVector(b, u * u);
 function monitorCamera(t: number): Pose {
   const fill = SCREEN_H / 2 / Math.tan(THREE.MathUtils.degToRad(40) / 2) * 1.02; // screen height fills the frame
   const at = (x: number, y: number, z: number) => new THREE.Vector3(M.x + x, M.y + y, M.z + z);
-  const wide = at(12, 7, 21), shoulder = at(-3.6, 5.6, 17.5), roomLook = at(2.5, 0.5, -2);
+  const close = at(Math.sin(t * 0.2) * 0.04, 0, fill), screen = at(0, 0, 0), roomLook = at(2.4, 0.9, 0);
+  if (DEBUG_CAM) return [at(DEBUG_CAM[0], DEBUG_CAM[1], DEBUG_CAM[2]), at(DEBUG_CAM[3], DEBUG_CAM[4], DEBUG_CAM[5]), DEBUG_CAM[6] ?? 40];
   if (t >= GIRL - 1) {
     const pos = at(Math.sin(t * 0.2) * 0.05, 0.05, THREE.MathUtils.lerp(fill * 1.5, fill * 1.06, smoothstep(GIRL - 0.6, 223, t)));
-    const out = smoothstep(229.2, DURATION - 0.3, t);
-    return [pos.lerp(wide, out * (2 - out)), at(0, 0, 0).lerp(roomLook, out), 40 + out * 8];
+    const out = smoothstep(229.2, DURATION - 0.2, t), u = out * (2 - out);
+    return [bez(pos, at(5.5, 3.5, 12), at(11, 5.6, 25), u), screen.clone().lerp(roomLook, u), 40 - u * 2];
   }
-  const into = smoothstep(1.2, 8.8, t);
-  const pos = wide.clone().lerp(at(Math.sin(t * 0.2) * 0.04, 0, fill), into);
-  const look = roomLook.clone().lerp(at(0, 0, 0), into);
-  let fov = 48 - into * 8;
-  // dive at the orange counter on the screen
+  // the room, drifting; then round her right shoulder and in to the screen
+  const drift = smoothstep(0, 9, t), into = smoothstep(6.6, 10.6, t);
+  const wide = at(11 - drift * 1.6, 5.6 - drift * 0.5, 25 - drift * 3);
+  const pos = bez(wide, at(6.2, 3.9, 10.5), close, into);
+  const look = roomLook.clone().lerp(screen, smoothstep(0.1, 0.9, into));
+  let fov = 38 + into * 2;
+  // back over her left shoulder on "I know it better than she does", then the dive at the orange counter
   const target = at((1150 / 1440 - 0.5) * SCREEN_W, (0.5 - 640 / 1080) * SCREEN_H, 0);
   look.lerp(target, smoothstep(HEARD, PULL_BACK, t) * 0.3);
   const back = smoothstep(PULL_BACK, DIVE, t);
-  pos.lerp(shoulder, back);
-  fov += back * 4;
+  const shoulder = at(-5.0, 5.2, 19);
+  if (back > 0) pos.copy(bez(close, at(-4.6, 3.0, 9.5), shoulder, back));
+  fov += back * 2;
   const dive = smoothstep(DIVE, ROLL_IN, t);
   if (dive > 0) {
     pos.lerp(target.clone().add(new THREE.Vector3(0, 0, 0.08)), dive * dive);
@@ -266,7 +278,9 @@ function render(t: number) {
     const heard = smoothstep(HEARD, DIVE - 0.4, t);
     // switch on at the start, switch off at the very end
     const power = smoothstep(0.5, 1.5, t) * (1 - smoothstep(DURATION - 1.7, DURATION - 0.7, t));
-    monitor.update(t, { power, kick: kick * energy, heard, girl: t < GIRL - 1 });
+    // she starts to nod when her own beat comes in (in half time: down on one and three)
+    const nod = 0.25 * smoothstep(9, 13, t) + 0.75 * smoothstep(KICK_IN - 0.1, KICK_IN + 1.2, t);
+    monitor.update(t, { power, kick: kick * energy, heard, girl: t < GIRL - 1, nod, beat: beat / 2 });
     const [pos, look, fov] = monitorCamera(t);
     // "the kick drum shook the floor"
     const shake = window01(t, 20.24, 29, 0.2) * kick * 0.012;
@@ -292,12 +306,13 @@ function render(t: number) {
   // post: glow in the choruses and once the ghosts are brought to the light
   bloom.strength = rollOn ? 0.45 + chorus * 0.4 + keyframes(GHOST_GLOW, t) * 0.15 + bass * chorus * 0.25 : 0.55 + kick * energy * 0.2;
   bloom.radius = 0.5;
-  bloom.threshold = rollOn ? 0.7 : 0.8;
+  bloom.threshold = rollOn ? 0.7 : 0.9;
   const ru = retro.uniforms;
   ru.uTime.value = t;
   ru.uPixel.value = 1;
   ru.uRGB.value = (0.5 + kick * 2.5 * energy + window01(t, FORGOT, FORGOT + 1.6, 0.2) * 3) * (H / 1080);
   ru.uGlitch.value = Math.max(window01(t, DELETE - 0.05, DELETE + 0.35, 0.05) * 0.8, window01(t, FORGOT, FORGOT + 1.4, 0.2) * 0.35);
+  ru.uVignette.value = rollOn ? 0.9 : 0.5;
   ru.uFade.value = keyframes(FADE, t);
 
   composer.render();
@@ -351,6 +366,7 @@ function live() {
     await song.el.play();
     startEl.remove();
   }, { once: true });
+  endScreen(song);
 
   addEventListener('keydown', (e) => {
     const t = song.el.currentTime;

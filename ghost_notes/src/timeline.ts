@@ -114,8 +114,8 @@ export const LYRICS: Lyric[] = [
 // ── Story cues. Every visual moment hangs off a sung word (see src/karaoke.ts for the word times).
 
 // Intro and verse 1: the 2004 screen
-export const SPLASH: [number, number] = [1.0, 9.2]; // the app's splash screen, loading plugins
-export const RACK_OPEN = 9.2; // the channel rack, empty, its step light already running
+export const SPLASH: [number, number] = [1.0, 11.2]; // the app's splash screen, loading plugins
+export const RACK_OPEN = 11.2; // the channel rack, empty, its step light already running
 export const CLICKS: [number, number] = [18.24, 20.1]; // "Lit up sixteen squares": one click per square
 export const KICK_IN = 20.24; // "...till the kick drum shook the floor": her pattern starts playing
 export const RENDER = 21.72; // "She put it up": export to mp3
@@ -194,6 +194,7 @@ export const GHOST_GLOW: [number, number][] = [[0, 0], [LIGHT - 0.3, 0], [LIGHT 
 export const CREDITS: [string, string][] = [
   ['Song', 'made with Suno v6'],
   ['Animation', 'Claude Sonnet 5.5, in TypeScript and three.js'],
+  ['Bedroom', 'Claude Fable 5.2'],
   ['Direction', 'João Galego'],
   ['Ghost notes', 'everyone, uncredited'],
   ['Samples cleared', '0 of 41,206,553'],

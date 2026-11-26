@@ -7,7 +7,7 @@ import {
   rnd, rr, smooth, txt, typed, win, wobble,
 } from './art';
 import { WORD_TIMES } from './karaoke';
-import { CanvasTex, MONO, SANS, karaokeAt, karaokeLines, karaokeText } from './text';
+import { CanvasTex, MONO, SANS, karaokeAt, karaokeLines, karaokeText, wrap } from './text';
 import { LAYER_COLORS, LAYER_NAMES, drummerBar } from './songs';
 import {
   ASK, CHORUSES, CREDITS, CREDITS_START, DEFINITION, DELETE, DIVE, DURATION, FORGOT, KEYS, LIGHT, LIVES_IN_ME, LYRICS,
@@ -555,12 +555,15 @@ function velocityLane(c: CanvasRenderingContext2D, s: UiState) {
 function definition(c: CanvasRenderingContext2D, t: number) {
   const a = win(t, DEFINITION[0], DEFINITION[1], 0.35);
   if (a <= 0) return;
-  at(c, 1330, 300, { a, s: 0.96 + 0.04 * outCubic(ramp(t, DEFINITION[0] - 0.35, DEFINITION[0] + 0.4)) }, () => {
-    panel(c, -400, -150, 800, 300, { fill: '#f3efe6', r: 10 });
-    txt(c, 'ghost note', -360, -92, { size: 50, weight: 800, color: C.ink });
-    txt(c, '/ˈɡōst nōt/   noun', -360, -40, { size: 22, weight: 500, color: '#7a7466' });
-    const lines = ['A note played so softly you feel it', 'more than hear it, in between the', 'main beats. Take it out and the', "groove falls apart. Nobody knows why."];
-    lines.forEach((l, i) => txt(c, l, -360, 12 + i * 34, { size: 24, weight: 500, color: '#3c3a34' }));
+  at(c, 1370, 300, { a, s: 0.96 + 0.04 * outCubic(ramp(t, DEFINITION[0] - 0.35, DEFINITION[0] + 0.4)) }, () => {
+    // the card is as wide as its text
+    const w = 620, pad = 40, body = 'A note played so softly you feel it more than hear it, in between the main beats. Take it out and the groove falls apart. Nobody knows why.';
+    c.font = `500 25px ${SANS}`;
+    const lines = wrap(c, body, w - pad * 2), h = 150 + lines.length * 36 + pad - 8;
+    panel(c, -w / 2, -h / 2, w, h, { fill: '#f3efe6', r: 10 });
+    txt(c, 'ghost note', -w / 2 + pad, -h / 2 + 62, { size: 50, weight: 800, color: C.ink, max: w - pad * 2 });
+    txt(c, '/ˈɡōst nōt/   noun', -w / 2 + pad, -h / 2 + 112, { size: 22, weight: 500, color: '#7a7466', max: w - pad * 2 });
+    lines.forEach((l, i) => txt(c, l, -w / 2 + pad, -h / 2 + 164 + i * 36, { size: 25, weight: 500, color: '#3c3a34', max: w - pad * 2 }));
   });
 }
 
@@ -850,11 +853,14 @@ function credits(c: CanvasRenderingContext2D, t: number) {
   if (t < CREDITS_START - 0.2) return;
   const out = 1 - smooth(DURATION - 2.0, DURATION - 0.4, t);
   c.save();
-  c.globalAlpha = smooth(CREDITS_START - 0.2, CREDITS_START + 0.8, t) * out * 0.75;
+  // a light veil: the room behind (her empty chair, the monitor still on) should stay readable
+  c.globalAlpha = smooth(CREDITS_START - 0.2, CREDITS_START + 0.8, t) * out * 0.4;
   c.fillStyle = '#05070a'; c.fillRect(0, 0, W, H);
+  const step = 76, top = H / 2 - ((CREDITS.length - 1) * step) / 2;
   CREDITS.forEach(([label, value], i) => {
-    const y = H / 2 - 170 + i * 85;
-    c.globalAlpha = smooth(CREDITS_START + i * 0.8, CREDITS_START + i * 0.8 + 0.7, t) * out;
+    const y = top + i * step;
+    c.globalAlpha = smooth(CREDITS_START + i * 0.7, CREDITS_START + i * 0.7 + 0.7, t) * out;
+    c.shadowColor = 'rgba(0,0,0,0.9)'; c.shadowBlur = 14;
     txt(c, label.toUpperCase(), W / 2 - 230, y, { size: 24, weight: 700, color: C.orange, align: 'right', spacing: 3, max: 420 });
     txt(c, value, W / 2 - 190, y, { size: 32, color: '#eef1f4', font: MONO, max: 920 });
   });

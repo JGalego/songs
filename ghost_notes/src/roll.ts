@@ -184,7 +184,10 @@ const WHITE: [number, number, number][] = [
 const keyY = (p: number) => (PITCH_HI - 0.5 - p) * KEY_ROW;
 const mixHex = (a: string, b: string, k: number) => `#${new THREE.Color(a).lerp(new THREE.Color(b), k).getHexString()}`;
 
-function drawKeyboard(c: CanvasRenderingContext2D, pressed: Map<number, string>) {
+/** A key held down: by which colour of note, and how firmly (1: the melody; less: a ghost). */
+interface Press { color: string; k: number }
+
+function drawKeyboard(c: CanvasRenderingContext2D, pressed: Map<number, Press>) {
   c.fillStyle = '#0b0d10';
   c.fillRect(0, 0, KEY_W, (PITCH_HI - PITCH_LO) * KEY_ROW);
   for (let o = Math.floor(PITCH_LO / 12) - 1; o <= Math.ceil(PITCH_HI / 12); o++) {
@@ -192,20 +195,21 @@ function drawKeyboard(c: CanvasRenderingContext2D, pressed: Map<number, string>)
       const midi = o * 12 + pc;
       if (midi < PITCH_LO - 1 || midi > PITCH_HI) continue;
       const y0 = keyY(o * 12 + b) + 1.5, y1 = keyY(o * 12 + a) - 1.5;
-      const on = pressed.get(midi);
+      const on = pressed.get(midi), k = on?.k ?? 0, col = on?.color ?? '#000000';
       const g = c.createLinearGradient(0, 0, KEY_W, 0);
-      if (on) { g.addColorStop(0, mixHex(on, '#000000', 0.25)); g.addColorStop(1, mixHex(on, '#ffffff', 0.15)); }
-      else { g.addColorStop(0, '#7f868c'); g.addColorStop(0.7, '#a9b0b6'); g.addColorStop(1, '#b8bec3'); }
+      g.addColorStop(0, mixHex('#7f868c', mixHex(col, '#000000', 0.25), k));
+      g.addColorStop(0.7, mixHex('#a9b0b6', col, k));
+      g.addColorStop(1, mixHex('#b8bec3', mixHex(col, '#ffffff', 0.18), k));
       c.fillStyle = g;
       c.beginPath(); c.roundRect(0, y0, KEY_W - 6, y1 - y0, [0, 7, 7, 0]); c.fill();
       // the front lip of the key, and a pressed key's shadow at the hinge
-      c.fillStyle = on ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.12)';
+      c.fillStyle = `rgba(0,0,0,${0.12 + 0.13 * k})`;
       c.fillRect(KEY_W - 14, y0, 8, y1 - y0);
-      if (on) { c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(0, y0, 18, y1 - y0); }
+      if (k > 0) { c.fillStyle = `rgba(0,0,0,${0.3 * k})`; c.fillRect(0, y0, 18, y1 - y0); }
       if (pc === 0) {
         c.font = '600 17px "Inter", system-ui, sans-serif';
         c.textAlign = 'right'; c.textBaseline = 'middle';
-        c.fillStyle = on ? 'rgba(0,0,0,0.65)' : '#6d757c';
+        c.fillStyle = k > 0.5 ? 'rgba(0,0,0,0.65)' : '#6d757c';
         c.fillText(`C${o - 1}`, KEY_W - 22, (y0 + y1) / 2 + 4);
       }
     }
@@ -213,15 +217,16 @@ function drawKeyboard(c: CanvasRenderingContext2D, pressed: Map<number, string>)
   for (let midi = PITCH_LO; midi < PITCH_HI; midi++) {
     if (![1, 3, 6, 8, 10].includes(midi % 12)) continue;
     const y = keyY(midi), h = KEY_ROW * 0.78, len = KEY_W * 0.6;
-    const on = pressed.get(midi);
+    const on = pressed.get(midi), k = on?.k ?? 0, col = on?.color ?? '#000000';
     c.fillStyle = 'rgba(0,0,0,0.35)'; // its shadow on the white keys
     c.fillRect(0, y - h / 2 + 4, len + 6, h);
     const g = c.createLinearGradient(0, 0, len, 0);
-    if (on) { g.addColorStop(0, mixHex(on, '#000000', 0.45)); g.addColorStop(1, mixHex(on, '#000000', 0.1)); }
-    else { g.addColorStop(0, '#121417'); g.addColorStop(0.85, '#2a2f35'); g.addColorStop(1, '#3a4047'); }
+    g.addColorStop(0, mixHex('#121417', mixHex(col, '#000000', 0.45), k));
+    g.addColorStop(0.85, mixHex('#2a2f35', mixHex(col, '#000000', 0.15), k));
+    g.addColorStop(1, mixHex('#3a4047', col, k));
     c.fillStyle = g;
     c.beginPath(); c.roundRect(0, y - h / 2, len, h, [0, 5, 5, 0]); c.fill();
-    c.fillStyle = on ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)'; // the glossy top edge
+    c.fillStyle = `rgba(255,255,255,${0.12 + 0.13 * k})`; // the glossy top edge
     c.fillRect(4, y - h / 2 + 3, len - 14, 3);
   }
 }
@@ -260,6 +265,8 @@ export class Roll {
   private keyBase: THREE.Mesh;
   private labels: { tex: CanvasTex; mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial }[] = [];
   private follow = new THREE.Group(); // things that ride along with the playhead
+  /** Every note that can press a key, bucketed by the beats it sounds over. Layer 0 is the melody. */
+  private sounding = new Map<number, { s: number; e: number; midi: number; layer: number; color: string }[]>();
 
   constructor() {
     const quad = new THREE.PlaneGeometry(1, 1).translate(0.5, 0, 0);
@@ -348,6 +355,16 @@ export class Roll {
     this.playhead.add(flag);
     this.follow.add(this.playhead);
 
+    const sounds = (start: number, len: number, midi: number, layer: number, color: string) => {
+      if (midi < PITCH_LO || midi >= PITCH_HI) return;
+      for (let b = Math.floor(start); b <= Math.floor(start + len); b++) {
+        if (!this.sounding.has(b)) this.sounding.set(b, []);
+        this.sounding.get(b)!.push({ s: start, e: start + len, midi, layer, color });
+      }
+    };
+    BRIGHT.forEach((b) => sounds(b.start, b.len, b.midi, 0, b.color));
+    LAYERS.forEach((l, i) => l.notes.forEach(([st, len, m]) => sounds(st, len, m, i + 1, LAYER_COLORS[i])));
+
     // the keyboard, on the left: a real piano drawn on a canvas, redrawn when the keys pressed change
     this.keyTex = new CanvasTex(KEY_W, (PITCH_HI - PITCH_LO) * KEY_ROW);
     this.keys = new THREE.Mesh(
@@ -397,13 +414,6 @@ export class Roll {
     return g;
   }
 
-  /** The bright notes playing at `beat` (for the keyboard): midi → colour. */
-  private playing(beat: number) {
-    const on = new Map<number, string>();
-    for (const b of BRIGHT) if (beat >= b.start && beat < b.start + b.len) on.set(b.midi, b.color);
-    return on;
-  }
-
   update(s: RollState) {
     for (const m of [this.ghostMat, this.brightMat]) {
       const u = m.uniforms;
@@ -427,14 +437,24 @@ export class Roll {
     });
     (this.playhead.material as THREE.MeshBasicMaterial).opacity = 0.75 + s.kick * 0.25;
 
-    // keys: lit while their note plays; in "I've never pressed a key" they go down by themselves
-    const playing = this.playing(s.beat);
-    const pressed = new Map<number, string>();
-    for (let midi = PITCH_LO; midi < PITCH_HI; midi++) {
-      if (playing.has(midi) && s.bright > 0.3) pressed.set(midi, playing.get(midi)!);
-      else if (s.ghostKeys > 0.5 && rnd(midi * 3.1 + Math.floor(s.t * 6.5)) > 0.84) pressed.set(midi, PHANTOM);
+    // keys: always in step with the notes on screen. The melody presses its keys fully, in each note's colour (the
+    // AI's own notes, or their twins once the ghosts have taken the line); every visible ghost layer presses its own,
+    // fainter with depth; and in "I've never pressed a key" a few go down by themselves.
+    const pressed = new Map<number, Press>();
+    const melody = Math.max(s.bright, s.pull * (1 - s.lift)) > 0.3;
+    const gone = (1 - s.drop) * (1 - s.lift);
+    for (const n of this.sounding.get(Math.floor(s.beat)) ?? []) {
+      if (s.beat < n.s || s.beat >= n.e) continue;
+      const k = n.layer === 0 ? (melody ? 1 : 0) : Math.min(0.5, 0.62 * s.ghost * s.layers[n.layer] * gone * Math.exp(-n.layer * 0.07));
+      if (k > 0.06 && k > (pressed.get(n.midi)?.k ?? 0)) pressed.set(n.midi, { color: n.color, k: Math.round(k * 8) / 8 });
     }
-    this.keyTex.draw([...pressed].map(([m, c]) => m + c).join(), (c) => drawKeyboard(c, pressed));
+    if (s.ghostKeys > 0.5) {
+      for (let midi = PITCH_LO; midi < PITCH_HI; midi++) {
+        if (!pressed.has(midi) && rnd(midi * 3.1 + Math.floor(s.t * 6.5)) > 0.84) pressed.set(midi, { color: PHANTOM, k: 0.8 });
+      }
+    }
+    // (the key is never empty, so the keyboard is drawn even on a frame where nothing is pressed)
+    this.keyTex.draw(`keys:${[...pressed].map(([m, p]) => `${m}${p.color}${p.k}`).join()}`, (c) => drawKeyboard(c, pressed));
     (this.keys.material as THREE.MeshBasicMaterial).opacity = Math.min(1, s.frontAlpha * 1.2) * s.keys;
     (this.keyBase.material as THREE.MeshBasicMaterial).opacity = Math.min(1, s.frontAlpha * 1.2) * s.keys;
 
