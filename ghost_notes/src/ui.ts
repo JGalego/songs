@@ -861,8 +861,9 @@ function credits(c: CanvasRenderingContext2D, t: number) {
     const y = top + i * step;
     c.globalAlpha = smooth(CREDITS_START + i * 0.7, CREDITS_START + i * 0.7 + 0.7, t) * out;
     c.shadowColor = 'rgba(0,0,0,0.9)'; c.shadowBlur = 14;
-    txt(c, label.toUpperCase(), W / 2 - 230, y, { size: 24, weight: 700, color: C.orange, align: 'right', spacing: 3, max: 420 });
-    txt(c, value, W / 2 - 190, y, { size: 32, color: '#eef1f4', font: MONO, max: 920 });
+    // the split sits left of centre so the longest value (the animation line) fits at full size
+    txt(c, label.toUpperCase(), W / 2 - 370, y, { size: 24, weight: 700, color: C.orange, align: 'right', spacing: 3, max: 420 });
+    txt(c, value, W / 2 - 330, y, { size: 32, color: '#eef1f4', font: MONO, max: 1120 });
   });
   c.restore();
 }

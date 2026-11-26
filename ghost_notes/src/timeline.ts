@@ -193,8 +193,7 @@ export const GHOST_GLOW: [number, number][] = [[0, 0], [LIGHT - 0.3, 0], [LIGHT 
 // ── Credits, over the 2004 screen
 export const CREDITS: [string, string][] = [
   ['Song', 'made with Suno v6'],
-  ['Animation', 'Claude Sonnet 5.5, in TypeScript and three.js'],
-  ['Bedroom', 'Claude Fable 5.2'],
+  ['Animation', 'Claude Sonnet 5.5 & Fable 5.2, in TypeScript and three.js'],
   ['Direction', 'João Galego'],
   ['Ghost notes', 'everyone, uncredited'],
   ['Samples cleared', '0 of 41,206,553'],
